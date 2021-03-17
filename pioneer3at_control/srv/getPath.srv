@@ -1,0 +1,4 @@
+geometry_msgs/PoseStamped[] points
+bool flag
+---
+bool success

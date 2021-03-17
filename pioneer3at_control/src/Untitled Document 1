@@ -1,0 +1,27 @@
+|----------------|
+|--Optimization--|
+|----------------|
+
+Typically numeric optimization algorithms are iterative:
+- starts with an initial guess (cold or warm start)
+- iteratively improves guess
+- until a convergence criterion is met
+
+Good optimization algorithms are:
+- robust: with respect classes of problems and initial guess choices
+- efficient: in terms of computational time and memory usage
+- accurate: the solution given sufficiently close to the true optimum
+
+Convex function: if domain is convex and if the linear interpolation between any two points in the domain is greater or equal than the function itself.
+
+KKT conditions are necessary and sufficient for optimality for convex problems.
+
+-> Descent methods for constrained problems <-
+
+Exterior point methods: 
+* replace constraints with a penalty P(x) to the cost for constraint violation
+* iterate unscontrained minimize f(x) + niu * P(x) while bringing niu to infinity.
+
+Interior point methods:
+* replace constraints with a barrier B(x) on the feasible set frontier
+* iterate unconstrained minimize f(x) + B(x) / niu while bringing niu to infinity

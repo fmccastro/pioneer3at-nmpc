@@ -1,0 +1,6 @@
+- Os resultados obtidos no Matlab com o ACADO são diferentes daqueles obtidos ao correr o ficheiro test.c que é gerado na exportação;
+- É necessário verificar porque é que o ficheiro test.c não simula a mesma duração de tempo que no Matlab;
+
+-> A frequência dos sensores tem de ser diferente (em princípio maior) da frequência do loop de controlo.
+-> Ter sempre como referência o ponto de objectivo vai dificultar uma convergência suave por parte do robot. Assim é necessário introduzir checkpoints em cada iteração para obter uma trajetória mais suave do robot, tendo sempre como referência o ponto de objectivo final.
+-> 

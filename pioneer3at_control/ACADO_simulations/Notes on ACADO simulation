@@ -1,0 +1,23 @@
+References:
+
+From Linear to Nonlinear MPC: bridging the gap via the RTI [1]
+
+|||||||||||||||||
+||             ||
+||Preliminaires||
+||	       ||	
+|||||||||||||||||
+
+The sampling time should be short enough, to reduce the nonlinearities in the problem [1].
+When the prediction horizon becomes too short, the controller performance visibly degradates and the RTI solutions start to diverge from the converged solutions. [1]
+High integration accuracies are not always needed and the closed-loop trajectories become insensitive to integrator accuracy when it gets high enough.[1]. Moreover, when deploying NMPC on real systems, unmodeled dynamics and external perturbations dominate over the integration error, so that it can be preferrable to favour faster sampling times and rather use a reduced integration accuracy in order to meet tight timing constraints. [1]
+
+|||||||||||||||
+||           ||
+||Simulations||
+||	     ||	
+|||||||||||||||
+
+Parece que quanto mais perto do fim da simulação o robot estiver de chegar ao ponto de objectivo, menos linear é a trajetória. Quanto mais longe for o ponto de objectivo, mais longe o robot está de pouca de percorrer a distância mínima.
+
+
