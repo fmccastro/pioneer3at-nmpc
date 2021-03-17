@@ -1,0 +1,47 @@
+<?xml version="1.0" ?>
+<launch>
+
+    <node name = "nmpc" pkg = "pioneer3at_control" type = "nmpc.py" output = "screen" />
+    <node name = "poseSelector" pkg = "pioneer3at_control" type = "poseSelector.py" output = "screen" />
+    <node name = "markers" pkg = "pioneer3at_control" type = "markers.py" output = "screen" />
+    <!--<node name = "terramechanics" pkg = "pioneer3at_control" type = "terramechanics.py" output = "screen" />-->
+
+    <!-- Node for treatment of data -->
+    <node name = "data" pkg = "pioneer3at_control" type = "data.py" output = "screen" />
+
+    <!-- Get the PoseWithCovarianceStamped from the Odometry topic which comes from the robot_localization package -->
+    <node name = "msgTransformer" pkg = "pioneer3at_control" type = "msgTransformer.py" output = "screen" />
+
+    <!--<node pkg = "nodelet" type = "nodelet" name = "standalone_nodelet" args = "manager" output = "screen" />
+
+    <node pkg = "nodelet" type = "nodelet" name = "ObstacleDetection" args = "load rtabmap_ros/obstacles_detection standalone_nodelet" output = "screen" >
+
+        <param name = "frame_id" type = "string" value = "base_link"/>
+        <param name = "queue_size" type = "int" value = "10" />
+        <param name = "normal_estimation_radius" type = "double" value = "0.05" />
+        <param name = "Grid/MaxGroundAngle" type = "double" value = "0.707" />
+        <param name = "min_cluster_size" type = "int" value = "20" />
+        <param name = "max_obstacles_height" type = "double" value = "0.0" />
+
+        <remap from = "cloud" to = "/pioneer3at/RGB_D/depth/points" />
+        <remap from = "ground" to = "/pioneer3at/ground" />
+        <remap from = "obstacles" to = "/pioneer3at/obstacles" />
+        <remap from = "proj_obstacles" to = "/pioneer3at/proj_obstacles" />
+
+    </node>-->
+
+    <!-- Traversability estimation -->
+    <!--<include file = "$(find traversability_estimation)/launch/traversability_estimation.launch" />
+    <include file = "$(find traversability_estimation)/launch/visualization.launch" />-->
+
+    <!-- Estimation of terrain elevation -->
+    <!--<include file = "$(find elevation_mapping_demos)/launch/pioneer3at_marsYard.launch" />-->
+    
+    <!-- Fusion of sensors to yield filtered pose -->
+    <!--<include file = "$(find robot_localization)/launch/ekf_template.launch" />-->
+
+    <rosparam>
+        init: 2     <!-- Parameter to initialize nodes by descending order -->
+    </rosparam>
+
+</launch>

@@ -1,0 +1,54 @@
+<?xml version="1.0" ?>
+<sdf version="1.5">
+  <world name="platform">
+  
+    <include>
+      <uri>model://sun</uri>
+    </include>
+
+    <include>
+      <uri>model://heightmap_mars</uri>
+    </include>
+
+    <include>
+      <name>rock1</name>
+      <pose>
+      0 -2 0 0 0 0
+      </pose>
+      <uri>model://mars_rock_1</uri>
+    </include>
+
+     <include>
+      <name>rock2</name>
+      <pose>
+      10 2 0 0 0 0
+      </pose>
+      <uri>model://mars_rock_1</uri>
+    </include>
+
+    <include>
+      <name>rock3</name>
+      <pose>
+      0 2 0 0 0 0
+      </pose>
+      <uri>model://mars_rock_2</uri>
+    </include>
+    
+    <include>
+      <name>rock4</name>
+      <pose>
+      6 -2 0 0 0 0
+      </pose>
+      <uri>model://mars_rock_2</uri>
+    </include>
+
+    <include>
+      <name>rock5</name>
+      <pose>
+      15 15 0 0 0 0
+      </pose>
+      <uri>model://mars_rock_3</uri>
+    </include>
+
+  </world>
+</sdf>

@@ -1,0 +1,6 @@
+<launch>
+    
+    <!--<node name = "rviz1" pkg = "rviz" type = "rviz" args = "-d $(find amr_robots_description)/urdf/display_urdf.rviz" required = "true" />-->
+    <node name = "rviz" pkg = "rviz" type = "rviz" args = "-d $(find elevation_mapping_demos)/rviz/pioneer3at_visualization.rviz -f base_link" required = "true" />
+    
+</launch>

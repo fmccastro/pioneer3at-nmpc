@@ -1,0 +1,80 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <model name="marsYard">
+    <static>true</static>
+    <link name="link">
+      <collision name="collision">
+        <geometry>
+          <heightmap>
+<<<<<<< HEAD
+            <uri>model://marsYard2/materials/textures/marsHeightmap2.jpg</uri>
+            <size>25 25 2</size>
+=======
+            <uri>model://marsYard/materials/textures/heightmap.jpg</uri>
+            <size>50 50 2</size>
+>>>>>>> master
+            <pos>0 0 0</pos>
+          </heightmap>
+        </geometry>
+      </collision>
+      <visual name="visual">
+        <geometry>
+          <heightmap>
+            <use_terrain_paging>false</use_terrain_paging>
+
+            <texture>
+<<<<<<< HEAD
+              <diffuse>model://marsYard2/materials/textures/mars_tex1.jpg</diffuse>
+=======
+              <diffuse>model://marsYard/materials/textures/mars_tex1.jpg</diffuse>
+>>>>>>> master
+              <normal>file://media/materials/textures/flat_normal.png</normal>
+              <size>10</size>
+            </texture>
+
+            <blend>
+              <min_height>0</min_height>
+              <fade_dist>0.5</fade_dist>
+            </blend>
+
+            <texture>
+<<<<<<< HEAD
+              <diffuse>model://marsYard2/materials/textures/mars_tex2.jpg</diffuse>
+=======
+              <diffuse>model://marsYard/materials/textures/mars_tex2.jpg</diffuse>
+>>>>>>> master
+              <normal>file://media/materials/textures/flat_normal.png</normal>
+              <size>10</size>
+            </texture>
+
+            <blend>
+              <min_height>1</min_height>
+              <fade_dist>5</fade_dist>
+            </blend>
+
+            <texture>
+<<<<<<< HEAD
+              <diffuse>model://marsYard2/materials/textures/mars_tex3.jpg</diffuse>
+=======
+              <diffuse>model://marsYard/materials/textures/mars_tex3.jpg</diffuse>
+>>>>>>> master
+              <normal>file://media/materials/textures/flat_normal.png</normal>
+              <size>10</size>
+            </texture>
+
+<<<<<<< HEAD
+            <uri>model://marsYard2/materials/textures/marsHeightmap2.jpg</uri>
+            <size>25 25 2</size>
+            <pos>0 0 0</pos>
+=======
+            <uri>model://marsYard/materials/textures/heightmap.jpg</uri>
+            <size>50 50 2</size>
+            <pos>0 0 0</pos>
+
+>>>>>>> master
+          </heightmap>
+        </geometry>
+      </visual>
+    </link>
+  </model>
+</sdf>
