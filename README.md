@@ -5,7 +5,7 @@
 This repo is the hub of the code which supports the development of a master thesis in Aerospace Engineering at [Técnico Lisboa](https://tecnico.ulisboa.pt/en/).
 
 ## Thesis authors
-1. Francisco Castro, [mailto](mailto:francisco.de.castro@ist.utl.pt)
+1. Francisco Castro, <francisco.de.castro@ist.utl.pt>
 2. [Rodrigo Ventura](https://welcome.isr.tecnico.ulisboa.pt/author/rodrigomartinsdematos/)
 
 ##
