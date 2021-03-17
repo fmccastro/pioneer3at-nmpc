@@ -8,10 +8,7 @@ This repo is the hub of the code which supports the development of a master thes
 1. Francisco Castro, <francisco.de.castro@ist.utl.pt>
 2. [Rodrigo Ventura](https://welcome.isr.tecnico.ulisboa.pt/author/rodrigomartinsdematos/)
 
-##
-
 ##  Repo Structure 
-
 
 ```
 .
