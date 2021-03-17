@@ -9,16 +9,17 @@
 │   └── ...
 ├── pioneer3at_description
 │   └── ...
-└── pioneer3at_gazebo
-    ├── launch
-    │   ├── manualControl.launch
-    │   ├── nodes.launch
-    │   ├── rviz.launch
-    │   └── spawnRobot.launch
-    ├── worlds
-    │   ├── empty.world
-    │   ├── emptyWorld2.world
-    │   ├── marsYard.world
-    │   └── Obstacles.world
-    └── ...
+├── pioneer3at_gazebo
+│   ├── launch
+│   │   ├── manualControl.launch
+│   │   ├── nodes.launch
+│   │   ├── rviz.launch
+│   │   └── spawnRobot.launch
+│   ├── worlds
+│   │   ├── empty.world
+│   │   ├── emptyWorld2.world
+│   │   ├── marsYard.world
+│   │   └── Obstacles.world
+│   └── ...
+└── ...
 ```
