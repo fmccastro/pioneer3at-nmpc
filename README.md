@@ -1,5 +1,7 @@
 # Rover Navigation using Model Predictive Control Methods
 
+## This repo is the hub of the code which supports the development of a master thesis in Aerospace Engineering at [Técnico Lisboa](https://tecnico.ulisboa.pt/en/)
+
 
 ##  Folder Structure 
 
