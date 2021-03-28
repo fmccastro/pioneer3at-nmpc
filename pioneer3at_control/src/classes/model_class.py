@@ -143,9 +143,9 @@ class Model:
                             'print_time': True,
 
                             'printLevel': 'none'
-                    }
+                    },
 
-                    #'expand': True
+                    'expand': True
                 }
 
             self.__optSolver = 'qrsqp'

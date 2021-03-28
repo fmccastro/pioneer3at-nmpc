@@ -1,0 +1,85 @@
+""" System Parameters """
+    Ts = 0.13                                                           #   Sampling Time
+    N = 10                                                              #   Control Intervals
+    NbStates = 3                                                        #   Number of States
+    NbControls = 2                                                      #   Number of Controls
+    mapLength = 50.0                                                    #   Square Map dimension
+
+    """ Robot's admissible space set """
+    X_lb = [ -mapLength/2.0, -mapLength/2.0, -math.pi ]
+    X_ub = [ mapLength/2.0, mapLength/2.0, math.pi ]
+    
+    """ Limits on the Robot's Controls """
+    U_lb = [ -0.7, -140 * math.pi / 180 ]                               #   Controls lower bound                           
+    U_ub = [  0.7,  140 * math.pi / 180 ]                               #   Controls upper bound
+
+    """ Penalty Matrices """
+    Q = ca.diag( ca.MX( [ 0.8, 0.8, 0.8 ] ) )                           #   States Matrix
+    R = ca.diag( ca.MX( [ 0.1, 0.1 ] ) )                                #   Controls Matrix
+
+    """ Goal Point on [Px] units """
+    goalPoint = np.array( [ 340, 115 ] )
+
+    """ Reference Path Points on [Px] units """
+    path = [
+                [ 194, 80 ],
+                [ 124, 106.667 ],
+                [ 124.5, 180.0 ],
+                [ 125, 250.667 ],
+                [ 190, 360.533 ],
+                [ 222, 343.467 ],
+                [ 247, 283.733 ],
+                [ 298, 299 ],
+                [ 341, 362 ],
+                [ 400, 265 ],
+                [ 401, 186 ],
+                [ 340, 115 ]
+                                    ]
+    
+    """ Grayscale image from the terrain """
+    img = cv.imread( "marsYard/materials/textures/heightmap.jpg", cv.IMREAD_GRAYSCALE )
+    
+    """ Height-Pixel proportion """
+    heightProportion = 2.0/255
+    
+    """ Parameter parameterization factor for path tracking """
+    parameterSpeed = 0.001                                     #   For path tracking
+    parameterSpeed_FM = 0.1                                    #   For fast marching
+
+    """
+        Reference Pose: 0 -> true pose (from Gazebo) 
+                        1 -> fused pose ( IMU + Odometry) from robot_localization package
+    """                 
+    poseType = 0
+
+    """
+        Tracking Reference Type: 0 -> path
+                                 1 -> trajectory
+                                 2 -> fast marching path
+    """
+    refType = 0
+
+    """
+        Cost map for fast marching gradient computation
+    """
+
+    costMap = cv.imread( "marsYard/costMap_for_FM/heightmap_FM_1025_1.jpg", cv.IMREAD_GRAYSCALE )
+    
+    """
+        Minimum Distance the robot must be from the goal for the cycle to end
+    """
+    minDistToGoal = 0.25
+
+    """ Transcription method """
+    transMet = 1                    #   0   -> Direct Multiple Shooting (DMS)
+                                    #   1   -> Direct Single Shooting (DSS)
+    
+    """ Optimization type """
+    optType = 0                     #   0   -> SQP method
+                                    #   1   -> IPOPT method
+                                    #   2   -> QRSQP method
+                                    #   3   -> QRSQP method + jit
+    
+    """ Enable/Disable Gaussian Processes """
+    gpOnOff = False                                                      #   On (True), Off (False)
+

@@ -111,7 +111,7 @@ class Common:
                                     #   1   -> Direct Single Shooting (DSS)
     
     """ Optimization type """
-    optType = 3                     #   0   -> SQP method
+    optType = 0                     #   0   -> SQP method
                                     #   1   -> IPOPT method
                                     #   2   -> QRSQP method
                                     #   3   -> QRSQP method + jit
@@ -301,7 +301,7 @@ class Common:
 
         return J
 
-    def _distanceBtwPoints( self, point1, point2 ):
+    def _distanceBtwPoints( self, point1, point2, opt ):
 
         """
 
@@ -315,7 +315,11 @@ class Common:
 
         """
 
-        return math.sqrt( ( point1.x - point2[0] )**2 + ( point1.y - point2[1] )**2 )
+        if( opt == 0 ):
+            return math.sqrt( ( point1.x - point2[0] )**2 + ( point1.y - point2[1] )**2 )
+        
+        if( opt == 1 ):
+            return math.sqrt( ( point1.x - point2.x )**2 + ( point1.y - point2.y )**2 )
 
     def _shortestAngle( self, angle1, angle2 ):
 

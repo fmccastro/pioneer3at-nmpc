@@ -216,7 +216,7 @@ if __name__ == '__main__':
 
     flag = True
 
-    while( not rospy.is_shutdown() and common._distanceBtwPoints( pose, goalPoint ) > common.minDistToGoal ):
+    while( not rospy.is_shutdown() and common._distanceBtwPoints( pose, goalPoint, 0 ) > common.minDistToGoal ):
         try:
 
             cycleStart = time.time()

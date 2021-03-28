@@ -13,7 +13,7 @@ plotjuggler-ros-plugins/
 plotjuggler_msgs/
 rqt_multiplot_plugin/
 sensors/
-src/
+rtabmap_ros/
 teleop_tools/
 teleop_twist_keyboard/
 turtlebot3/

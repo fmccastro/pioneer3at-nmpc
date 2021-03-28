@@ -38,6 +38,7 @@ if __name__ == '__main__':
     distance = Float64()
 
     distance.data = 0
+    pose = common.robotPose
 
     distancePub.publish( distance )
 

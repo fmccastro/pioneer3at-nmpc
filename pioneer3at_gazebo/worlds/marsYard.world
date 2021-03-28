@@ -2,6 +2,14 @@
 <sdf version = "1.5" >
     <world name = "mars">
 
+        <physics type = "ode" >
+            <ode>
+                <solver>
+                    <friction_model>pyramid_model</friction_model>
+                </solver>
+            </ode>
+        </physics>
+
         <include>
             <uri>model://sun</uri>
         </include>

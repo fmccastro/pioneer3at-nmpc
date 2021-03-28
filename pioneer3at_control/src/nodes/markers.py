@@ -37,10 +37,10 @@ if __name__ == '__main__':
     rospy.Subscriber( '/pioneer3at/clock', Float64, common._clockCallback, 0 )                      #   '/pioneer3at/clock' -> topic for simulation time counting ( since the robot starts moving )
     rospy.Subscriber( '/pioneer3at/cycleTime', Float64, common._clockCallback, 1 )                  #   '/pioneer3at/cycleTime' -> topic for cycle iteration timing count
 
-    refPub = rospy.Publisher( '/pioneer3at/reference', Marker, queue_size = 1 )                     #   '/pioneer3at/reference' -> topic for current reference which goes into the cost function   
-    horPub = rospy.Publisher( '/pioneer3at/horizon', Marker, queue_size = 1 )                       #   '/pioneer3at/horizon' -> topic for optimization sucessive states solution throughout the horizon  
-    robotPathPub = rospy.Publisher( '/pioneer3at/robotPath', Marker, queue_size = 1 )               #   '/pioneer3at/robotPath' -> topic for robot's pose history visualization
-    pathPub = rospy.Publisher( '/pioneer3at/path', Path, queue_size = 1 )                           #   '/pioneer3at/path' -> topic for publishing fixed path from starting to goal
+    refPub = rospy.Publisher( '/pioneer3at/viz/reference', Marker, queue_size = 1 )                     #   '/pioneer3at/reference' -> topic for current reference which goes into the cost function   
+    horPub = rospy.Publisher( '/pioneer3at/viz/horizon', Marker, queue_size = 1 )                       #   '/pioneer3at/horizon' -> topic for optimization sucessive states solution throughout the horizon  
+    robotPathPub = rospy.Publisher( '/pioneer3at/viz/robotPath', Marker, queue_size = 1 )               #   '/pioneer3at/robotPath' -> topic for robot's pose history visualization
+    pathPub = rospy.Publisher( '/pioneer3at/viz/path', Path, queue_size = 1 )                           #   '/pioneer3at/path' -> topic for publishing fixed path from starting to goal
 
     if( common.refType == 0 ):  #   Generate points from pre-definied path for visualization purposes of a path-tracking reference
         
