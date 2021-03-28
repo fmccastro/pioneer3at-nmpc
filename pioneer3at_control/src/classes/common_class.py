@@ -180,7 +180,7 @@ class Common:
             self.robotPose = msg
 
     #   Type geometry_msgs/Twist.msg
-    def _twistCallback( self, msg ):
+    def _TwistCallback( self, msg ):
 
         #   Actuation ( with velocities )
         self.actuation = msg
@@ -193,7 +193,7 @@ class Common:
             self.step = msg
 
     #   Type std_msgs/Float64.msg
-    def _clockCallback( self, msg, opt ):
+    def _Float64Callback( self, msg, opt ):
 
         #   Simulator clock counter
         if( opt == 0 ):
@@ -202,15 +202,24 @@ class Common:
         #   Cycle time counter
         elif( opt == 1 ):
             self.cycleTime = msg
-    
+        
+        elif( opt == 2 ):
+            self.optTime = msg
+
+        elif( opt == 3 ):
+            self.distance = msg
+
     #   Type std_msgs/Float64MultiArray.msg
-    def _optPathSequence( self, msg, opt ):
+    def _Float64MultiArrayCallback( self, msg, opt ):
 
         if( opt == 0 ):
             self.pathSequence = msg
         
         elif( opt == 1 ):
             self.refSequence = msg
+        
+        elif( opt == 2 ):
+            self.error = msg
     
     #   Type pioneer3at_control/poseRef.msg, pose & reference
     def _poseRefCallback( self, msg ):

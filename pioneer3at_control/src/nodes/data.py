@@ -10,9 +10,9 @@ path.append(r"/home/fmccastro/Tese_RoverNavigation/ROS_workspaces/wsPy3/src/pion
 
 from std_msgs.msg import Float64MultiArray, Float64
 
-from pioneer3at_control.msg import poseRef, pose3D, Float64MultiArrayStamped, Float64Stamped
+from pioneer3at_control.msg import poseRef, pose3D
 
-from classes import Model, Planner, Common, LGP, localModel, LGP_Record
+from classes import Common
 
 if __name__ == '__main__':
 
