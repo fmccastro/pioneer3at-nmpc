@@ -23,4 +23,4 @@ robot_platform/
 traversability_estimation/
 elevation_mapping/
 amr-ros-config/
-*.pyc
+*.cpython-38.pyc
