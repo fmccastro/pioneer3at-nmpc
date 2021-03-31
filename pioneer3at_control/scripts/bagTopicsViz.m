@@ -37,6 +37,3 @@ tsPoseYaw = timeseries( poseYaw.yaw, poseYaw.Time );
 
 simTime = readtable( 'simClock.csv' );
 tsSimTime = timeseries( simTime.data, simTime.Time );
-
-%%  Plots
-plot(

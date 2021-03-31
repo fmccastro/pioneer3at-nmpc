@@ -59,6 +59,7 @@ find_package(catkin REQUIRED COMPONENTS
     poseRef.msg
     Float64Stamped.msg
     Float64MultiArrayStamped.msg
+    resampleData.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -180,6 +181,7 @@ catkin_install_python(PROGRAMS
 	src/nodes/poseSelector.py
 	src/nodes/nmpc.py
 	src/nodes/msgTransformer.py
+	src/nodes/dataOnlineProc.py
 	src/classes/model_class.py
 	src/classes/planner_class.py
 	src/classes/lgp_class.py

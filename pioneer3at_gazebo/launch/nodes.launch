@@ -9,6 +9,9 @@
     <!-- Node for treatment of data -->
     <node name = "data" pkg = "pioneer3at_control" type = "data.py" output = "screen" />
 
+    <!-- Node for data sampling-->
+    <node name = "dataOnlineProc" pkg = "pioneer3at_control" type = "dataOnlineProc.py" output = "screen" />
+
     <!-- Get the PoseWithCovarianceStamped from the Odometry topic which comes from the robot_localization package -->
     <node name = "msgTransformer" pkg = "pioneer3at_control" type = "msgTransformer.py" output = "screen" />
 

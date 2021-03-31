@@ -33,6 +33,7 @@ class Common:
     nmpc = 1                                                            #   Node [nmpc] initialization order                                                         
     poseSelector = 2                                                    #   Node [poseSelector] initialization order
     data = 0                                                            #   Node [data] initialization order
+    dataProc = -1                                                       #   Node [dataProc] initialization order
 
     """ System Parameters """
     Ts = 0.13                                                           #   Sampling Time

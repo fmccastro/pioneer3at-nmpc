@@ -44,6 +44,10 @@ if __name__ == '__main__':
 
     while( not rospy.is_shutdown() ):
         try:
+
+            if( index == 1 ):
+                #   Change "/init" parameter in order to allow the following node to initialize
+                rospy.set_param( "/init", common.dataProc - 1 )
             
             prevPose = pose
             

@@ -2,7 +2,7 @@
 from __future__ import absolute_import
 from __future__ import division
 
-import rospy, tf, sys, time
+import rospy, tf, sys, time, os
 
 import casadi as ca
 import numpy as np
@@ -54,7 +54,7 @@ if __name__ == '__main__':
     
     common._pauseFunction( "[nmpc.py] Press [ENTER] to activate node." )
     print( "[nmpc.py] It's active." )
-
+    
     k = Int32(0)                                                                        #   Number of optimizations counter
     cycleTime = Float64(0)                                                              #   Loop time 
     actuation = Twist()                                                                 #   Robot actuation
@@ -399,4 +399,12 @@ if __name__ == '__main__':
 
     nextCommand.publish(actuation)
 
-    rospy.spin()
+    common._pauseFunction("[nmpc.py] Simulation ended.")
+
+    nodes = os.popen("rosnode list").readlines()
+
+    for i in range( len(nodes) ):
+        nodes[i] = nodes[i].replace( "\n", "" )
+
+    for node in nodes:
+        os.system( "rosnode kill " + node )

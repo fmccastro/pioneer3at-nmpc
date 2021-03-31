@@ -1,0 +1,10 @@
+pose3D pose
+uint32 step
+float64[] solution
+float64[] reference
+float64 clock
+float64 cycleTime
+float64 optTime
+geometry_msgs/Twist actuation
+float64 distance
+float64[] error

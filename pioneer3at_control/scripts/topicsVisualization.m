@@ -1,63 +1,59 @@
-topics = rosbag('/home/fmccastro/Tese_RoverNavigation/ROS_workspaces/wsPy3/src/pioneer3at_control/bagfiles/subset.bag');
+topics = rosbag('/home/fmccastro/Tese_RoverNavigation/ROS_workspaces/wsPy3/subset_10.bag');
 
-%%  Robot Pose
-poseSel = select( topics, 'Topic', '/pioneer3at/robotPose' );
-poseStruct = readMessages( poseSel, 'DataFormat', 'struct' );
+%%  Resample
 
-xPoints = cellfun( @(m) double(m.X), poseStruct );
-yPoints = cellfun( @(m) double(m.Y), poseStruct );
+select = select(topics, 'Topic', '/pioneer3at/resample');
 
-%%  Simulation Time
-simTimeSel = select( topics, 'Topic', '/pioneer3at/clock' );
-simTimeStruct = readMessages( simTimeSel, 'DataFormat', 'struct' );
+struct = readMessages(select, 'DataFormat', 'struct');
 
-simTimeData = cellfun( @(m) double(m.Data), simTimeStruct );
+%%  Pose
 
-%%  Optimization Time
-optSel = select( topics, 'Topic', '/pioneer3at/optTime' );
-optStruct = readMessages( optSel, 'DataFormat', 'struct' );
+x = cellfun( @(m) double( m.Pose.X ), struct );
+y = cellfun( @(m) double( m.Pose.Y ), struct );
+z = cellfun( @(m) double( m.Pose.Z ), struct );
+roll = cellfun( @(m) double( m.Pose.Roll ), struct );
+pitch = cellfun( @(m) double( m.Pose.Pitch ), struct );
+yaw = cellfun( @(m) double( m.Pose.Yaw ), struct );
 
-optiData = cellfun( @(m) double(m.Data), optStruct );
+%%  Step
+
+step = cellfun( @(m) double( m.Step ), struct );
+
+%%  Solution
+
+solX = cellfun( @(m) double( m.Solution(1) ), struct );
+solY = cellfun( @(m) double( m.Solution(2) ), struct );
+solTheta = cellfun( @(m) double( m.Solution(3) ), struct );
 
 %%  Reference
-refSel = select( topics, 'Topic', '/pioneer3at/currentRef' );
-refStruct = readMessages( refSel, 'DataFormat', 'struct' );
 
-refX_Data = cellfun( @(m) double(m.Data(1)), refStruct );
-refY_Data = cellfun( @(m) double(m.Data(2)), refStruct );
+refX = cellfun( @(m) double( m.Reference(1) ), struct );
+refY = cellfun( @(m) double( m.Reference(2) ), struct );
+refTheta = cellfun( @(m) double( m.Reference(3) ), struct );
 
-%%  Commands
-comSel = select( topics, 'Topic', '/pioneer3at/cmd_vel' );
-comStruct = readMessages( comSel, 'DataFormat', 'struct' );
+%%   Simulation Time
 
-com_VX_Data = cellfun( @(m) double(m.Linear.X), comStruct );
-com_WZ_Data = cellfun( @(m) double(m.Angular.Z), comStruct );
+simTime =  cellfun( @(m) double( m.Clock_ ), struct );
 
-%%  Clock Time
-clockSel = select( topics, 'Topic', '/clock' );
-clockStruct = readMessages( clockSel, 'DataFormat', 'struct' );
+%%  Cycle Time
 
-clockData = cellfun( @(m) double( m.Clock_.Sec + m.Clock_.Nsec*10^(-9) ), clockStruct );
+cycleTime = cellfun( @(m) double( m.CycleTime ), struct );
 
-%%  Error with respect to reference
-errorSel = select( topics, 'Topic', '/pioneer3at/error' );
-errorStruct = readMessages( errorSel, 'DataFormat', 'struct' );
+%%  Optimization Time
 
-errorXData = cellfun( @(m) double( m.Data(1) ), errorStruct );
-errorYData = cellfun( @(m) double( m.Data(2) ), errorStruct );
-errorThetaData = cellfun( @(m) double( m.Data(3) ), errorStruct );
+optTime = cellfun( @(m) double( m.OptTime ), struct );
 
-%%  Distance covered by the robot
-distanceSel = select( topics, 'Topic', '/pioneer3at/distance' );
-distanceStruct = readMessages( distanceSel, 'DataFormat', 'struct' );
+%%  Actuations 
 
-distanceData = cellfun( @(m) double( m.Data ), distanceStruct );
+com_vx = cellfun( @(m) double( m.Actuation.Linear.X ), struct );
+com_wz = cellfun( @(m) double( m.Actuation.Angular.Z ), struct );
 
-%%  Plots
-figure
-title('Reference');
-plot(refX_Data, refY_Data);
+%%  Distance
 
-figure
-title('Pose');
-plot(xPoints, yPoints);
+distance = cellfun( @(m) double( m.Distance ), struct );
+
+%%  Error
+
+errorX = cellfun( @(m) double( m.Error(1) ), struct );
+errorY = cellfun( @(m) double( m.Error(2) ), struct );
+errorTheta = cellfun( @(m) double( m.Error(3) ), struct );

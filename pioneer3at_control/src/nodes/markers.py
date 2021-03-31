@@ -34,8 +34,8 @@ if __name__ == '__main__':
     rospy.Subscriber( '/pioneer3at/currentStep', Int32, common._Int32Callback, 0 )                              #   '/pioneer3at/currentStep' -> topic for cycle step
     rospy.Subscriber( '/pioneer3at/currentSol', Float64MultiArray, common._Float64MultiArrayCallback, 0 )       #   '/pioneer3at/currentSol' -> topic for states horizon
     rospy.Subscriber( '/pioneer3at/currentRef', Float64MultiArray, common._Float64MultiArrayCallback, 1 )       #   '/pioneer3at/currentRef' -> topic for current reference to follow
-    rospy.Subscriber( '/pioneer3at/clock', Float64, common._Float64Callback, 0 )                                  #   '/pioneer3at/clock' -> topic for simulation time counting ( since the robot starts moving )
-    rospy.Subscriber( '/pioneer3at/cycleTime', Float64, common._Float64Callback, 1 )                              #   '/pioneer3at/cycleTime' -> topic for cycle iteration timing count
+    rospy.Subscriber( '/pioneer3at/clock', Float64, common._Float64Callback, 0 )                                #   '/pioneer3at/clock' -> topic for simulation time counting ( since the robot starts moving )
+    rospy.Subscriber( '/pioneer3at/cycleTime', Float64, common._Float64Callback, 1 )                            #   '/pioneer3at/cycleTime' -> topic for cycle iteration timing count
 
     refPub = rospy.Publisher( '/pioneer3at/viz/reference', Marker, queue_size = 1 )                             #   '/pioneer3at/reference' -> topic for current reference which goes into the cost function   
     horPub = rospy.Publisher( '/pioneer3at/viz/horizon', Marker, queue_size = 1 )                               #   '/pioneer3at/horizon' -> topic for optimization sucessive states solution throughout the horizon  
