@@ -35,7 +35,7 @@ if __name__ == '__main__':
     pubResample = rospy.Publisher( '/pioneer3at/resample', resampleData, queue_size = 1 )                       #   '/pioneer3at/resample'    -> topic for resampling data
 
     #   Waiting for permission to initialize node
-    while( rospy.get_param("/init") != common.dataProc - 1 ):
+    while( rospy.get_param("/init") > common.dataProc ):
         continue
     
     print( "[dataOnlineProc.py] It's active." )

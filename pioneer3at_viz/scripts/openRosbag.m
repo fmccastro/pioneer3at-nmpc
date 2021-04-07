@@ -1,6 +1,6 @@
 clear all
-topics = rosbag('/home/fmccastro/Tese_RoverNavigation/ROS_workspaces/wsPy3/src/pioneer3at_viz/bagfiles/gpOff_terramechanicsOff/pathTracking/truePose/change_N/10/subset_10.bag');
-topicsResample = rosbag('/home/fmccastro/Tese_RoverNavigation/ROS_workspaces/wsPy3/src/pioneer3at_viz/bagfiles/gpOff_terramechanicsOff/pathTracking/truePose/change_N/10/subsetResample_10.bag');
+topics = rosbag('/home/fmccastro/Tese_RoverNavigation/ROS_workspaces/wsPy3/src/pioneer3at_viz/bagfiles/gpOff_terramechanicsOff/pathTracking/truePose/DirectSingleShooting/change_Ts/0_05s/subset.bag');
+topicsResample = rosbag('/home/fmccastro/Tese_RoverNavigation/ROS_workspaces/wsPy3/src/pioneer3at_viz/bagfiles/gpOff_terramechanicsOff/pathTracking/truePose/DirectSingleShooting/change_Ts/0_05s/subsetResample.bag');
 
 %%  Raw Data
 
@@ -115,6 +115,3 @@ resDistance = cellfun( @(m) double( m.Distance ), struct );
 resErrorX = cellfun( @(m) double( m.Error(1) ), struct );
 resErrorY = cellfun( @(m) double( m.Error(2) ), struct );
 resErrorTheta = cellfun( @(m) double( m.Error(3) ), struct );
-
-%%  Plots
-plot(refX, refY, 'b', X, Y, '--');

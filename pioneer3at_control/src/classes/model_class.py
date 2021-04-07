@@ -13,7 +13,7 @@ import tensorflow as tf
 from geometry_msgs.msg import Twist
 
 class Model:
-    def __init__( self, Nx, Nu, ode, J, controlIntervals, weightMatrix_1, weightMatrix_2, samplingTime, spaceSetLowerBounds, spaceSetUpperBounds, controLowerBounds, controlUpperBounds, transMethod, optimization, gpOnOff ):
+    def __init__( self, Nx, Nu, ode, J, controlIntervals, weightMatrix_1, weightMatrix_2, samplingTime, intAcc, spaceSetLowerBounds, spaceSetUpperBounds, controLowerBounds, controlUpperBounds, transMethod, optimization, gpOnOff ):
         
         """
 
@@ -35,6 +35,7 @@ class Model:
         self.__Nu = Nu
         self.__dt = samplingTime
         self.__N = controlIntervals
+        self.__M = intAcc
         self.__x_lb = spaceSetLowerBounds
         self.__x_ub = spaceSetUpperBounds
         self.__u_lb = controLowerBounds                       
@@ -51,7 +52,6 @@ class Model:
         statesRef = ca.MX.sym( 'statesRef', self.__Nx )
         
         """ Discrete Time Dynamics Formulation """
-        self.__M = 4
         DT = self.__dt / self.__M
 
         X0 = ca.MX.sym( 'X0', self.__Nx )
@@ -108,7 +108,7 @@ class Model:
         ######
 
         if( self.__opt == 0 ):
-            self.__optOptions = { 'qpsol': 'qpoases', 'qpsol_options': { 'printLevel': 'none' } }
+            self.__optOptions = { 'qpsol': 'qpoases', 'qpsol_options': { 'printLevel': 'none' }, 'expand': True }
             self.__optSolver = 'sqpmethod'
     
         elif( self.__opt == 1 ):
@@ -149,6 +149,37 @@ class Model:
                 }
 
             self.__optSolver = 'qrsqp'
+        
+        elif( self.__opt == 4 ):
+            self.__optOptions = {
+
+                    'qpsol': 'qpoases',
+
+                    #'max_iter': 2,
+
+                    'print_iteration': False,
+
+                    'print_header': False,
+
+                    'qpsol_options': { "jit": True,
+
+                            'jit_options': {
+                            
+                            'compiler': 'ccache gcc',
+
+                            'flags': ["-O3", "-pipe"] },
+
+                            'compiler': 'shell',
+
+                            'print_time': True,
+
+                            'printLevel': 'none'
+                    },
+
+                    'expand': True
+                }
+
+            self.__optSolver = 'sqpmethod'
         
         """
             NMPC Direct Multiple Shooting Formulation
@@ -294,235 +325,3 @@ class Model:
         """
 
         return self.__F_ode( pose, actuation )
-
-    """def _solveDMS( self, _measurement, _step, _lastSolution = None, _reference = None, _refType = None, _warmStart = False, _samplingTime = None, _gaussianProcess = None ):
-
-        
-            NMPC discretised with Direct Multiple Shooting and integration is performed with Runge Kutta 4
-
-            #   Inputs:
-                    _measurement:
-                    _lastSolution:
-                    trajectory:
-                    _step:
-                    type: 
-                    _warmStart:
-
-            #   Output:
-
-        if( _samplingTime == None ):
-            pass
-
-        else:
-            self.__dt = self.__dt
-
-        Start with an empty NLP
-        w = []
-        w0 = []
-        lbw = []
-        ubw = []
-        
-        G = []
-        lbg = []
-        ubg = []
-
-        J = 0
-
-        Initial conditions
-        Xk = ca.MX.sym( 'X_0', self.__Nx )
-        w += [Xk]
-
-        lbw += [ _measurement.linear.x, _measurement.linear.y, _measurement.angular.z ]
-        ubw += [ _measurement.linear.x, _measurement.linear.y, _measurement.angular.z ]
-
-        if( _warmStart is False ):
-            w0 = [0, 0, 0]
-
-        else:
-            w0 = _lastSolution[ self.__Nx + self.__Nu :: ]
-            w0 = ca.vertcat( w0, _lastSolution[ -(self.__Nx + self.__Nu) :: ] ) 
-        
-        for k in range( self.__N ):
-            
-            #   New NLP variable for the control
-            Uk = ca.MX.sym( 'U_' + str(k), self.__Nu )
-            w += [ Uk ]
-            lbw += self.__u_lb
-            ubw += self.__u_ub
-            
-            if( _warmStart is False ):
-                w0 += [0, 0]
-
-            if( _refType == 0 ):
-
-                if( k + _step > _reference.shape[0] - 1 ):
-                    currentRef = ca.vertcat( _reference[ -1, 0 ], _reference[ -1, 1 ], _reference[ -1, 2 ] )
-                
-                else:
-                    currentRef = ca.vertcat( _reference[ k + _step, 0 ], _reference[ k + _step, 1 ], _reference[ k + _step, 2 ] )
-            
-            elif( _refType == 1 ):
-
-                #   Integrate till the end of the interval
-                #dtraj_dt = reference.deriv( step * self.__dt + k * self.__dt )
-                #Uref = [ math.sqrt( dtraj_dt[0]**2 + dtraj_dt[1]**2 ), dtraj_dt[2] ]
-
-                currentRef = np.array( _reference.eval( _step + k * self.__dt ) )
-            
-            else:
-                currentRef = ca.vertcat( _reference[ k, 0 ], _reference[ k, 1 ], _reference[ k, 2 ] )
-
-            if( self.__gpOnOff is False ):
-                Fk = self.__F( Xk, currentRef, Uk )
-
-            elif( self.__gpOnOff == True and _gaussianProcess == None ):
-                Fk = self.__F( Xk, currentRef, Uk )
-            
-            elif( self.__gpOnOff == True and _gaussianProcess != None ):
-                gp_Pred = ca.vertcat( _gaussianProcess._prediction( 0, ca.transpose( ca.vertcat( Xk, Uk ) ) ),\
-                                      _gaussianProcess._prediction( 1, ca.transpose( ca.vertcat( Xk, Uk ) ) ),\
-                                      _gaussianProcess._prediction( 2, ca.transpose( ca.vertcat( Xk, Uk ) ) ) )
-                Fk = self.__F_gpOn( Xk, currentRef, Uk, gp_Pred )
-
-            Xk_end = Fk[0]
-
-            J += Fk[1]
-
-            #   New NLP variable for state at end of interval
-            Xk = ca.MX.sym( 'X_' + str(k + 1), self.__Nx )
-            w += [ Xk ]
-            lbw += self.__x_lb
-            ubw += self.__x_ub
-
-            if( _warmStart is False ):
-                w0 += [0, 0, 0]
-            
-            #   Continuity constraint
-            G += [ Xk_end - Xk ]
-            lbg += [ 0, 0, 0 ]
-            ubg += [ 0, 0, 0 ]
-        
-        #   Create NLP solver
-        prob = { 'f': J, 'x': ca.vertcat(*w), 'g': ca.vertcat(*G) }
-        solver = ca.nlpsol('solver', self.__optSolver, prob, self.__optOptions )
-
-        if( _warmStart is False ):
-            w0 = ca.vertcat( *w0 )
-        
-        lbw = ca.vertcat( *lbw )
-        ubw = ca.vertcat( *ubw )
-        lbg = ca.vertcat( *lbg )
-        ubg = ca.vertcat( *ubg )
-        
-        #   Solve the NLP
-        sol = solver( x0 = w0, lbx = lbw, ubx = ubw, lbg = lbg, ubg = ubg )
-
-        # Plot the solution
-        return sol"""
-
-    """def _solveDSS( self, _measurement, _step, _lastSolution, _reference, _refType, _warmStart, _samplingTime, _gaussianProcess ):
-
-            NMPC discretised with Direct Single Shooting and integration is performed with Runge Kutta 4
-
-            #   Inputs:
-                    _measurement:
-                    lastSolution:
-                    trajectory:
-                    _step:
-                    type: 
-                    warmStart:
-
-            #   Output:
-
-        if( _samplingTime == None ):
-            pass
-
-        else:
-            self.__dt = self.__dt
-
-        Start with an empty NLP
-        w = []
-        w0 = []
-        lbw = []
-        ubw = []
-        
-        G = []
-        lbg = []
-        ubg = []
-
-        J = 0
-
-        Initial conditions
-        Xk = ca.vertcat( _measurement.linear.x, _measurement.linear.y, _measurement.angular.z )
-
-        if( _warmStart ):
-            w0 = _lastSolution[ self.__Nu:: ] 
-            w0 = ca.vertcat( w0, _lastSolution[ -self.__Nu:: ] ) 
-        
-        for k in range( self.__N ):
-            
-            #   New NLP variable for the control
-            Uk = ca.MX.sym( 'U_' + str(k), self.__Nu )
-            w += [ Uk ]
-            lbw += self.__u_lb
-            ubw += self.__u_ub
-            
-            if( _warmStart is False ):
-                w0 += [0, 0]
-
-            if( _refType == 0 ):
-
-                if( k + _step > _reference.shape[0] - 1 ):
-                    currentRef = ca.vertcat( _reference[ -1, 0 ], _reference[ -1, 1 ], _reference[ -1, 2 ] )
-                
-                else:
-                    currentRef = ca.vertcat( _reference[ k + _step, 0 ], _reference[ k + _step, 1 ], _reference[ k + _step, 2 ] )
-            
-            elif( _refType == 1 ):
-
-                #   Integrate till the end of the interval
-                #dtraj_dt = reference.deriv( step * self.__dt + k * self.__dt )
-                #Uref = [ math.sqrt( dtraj_dt[0]**2 + dtraj_dt[1]**2 ), dtraj_dt[2] ]
-
-                currentRef = np.array( _reference.eval( _step + k * self.__dt ) )
-            
-            else:
-                currentRef = ca.vertcat( _reference[ k, 0 ], _reference[ k, 1 ], _reference[ k, 2 ] )
-
-            if( self.__gpOnOff is False ):
-                Fk = self.__F( Xk, currentRef, Uk )
-
-            elif( self.__gpOnOff == True and _gaussianProcess == None ):
-                Fk = self.__F( Xk, currentRef, Uk )
-            
-            elif( self.__gpOnOff == True and _gaussianProcess != None ):
-                gp_Pred = ca.vertcat( _gaussianProcess._prediction( 0, ca.transpose( ca.vertcat( Xk, Uk ) ) ),\
-                                      _gaussianProcess._prediction( 1, ca.transpose( ca.vertcat( Xk, Uk ) ) ),\
-                                      _gaussianProcess._prediction( 2, ca.transpose( ca.vertcat( Xk, Uk ) ) ) )
-                Fk = self.__F_gpOn( Xk, currentRef, Uk, gp_Pred )
-
-            Xk = Fk[0]
-
-            J += Fk[1]
-            
-            #   Inequality constraint
-            G += [ Xk ]
-            lbg += self.__x_lb
-            ubg += self.__x_ub
-        
-        #   Create NLP solver
-        prob = { 'f': J, 'x': ca.vertcat(*w), 'g': ca.vertcat(*G) }
-        solver = ca.nlpsol('solver', self.__optSolver, prob, self.__optOptions )
-
-        if( _warmStart is False ):
-            w0 = ca.vertcat( *w0 )
-        
-        lbw = ca.vertcat( *lbw )
-        ubw = ca.vertcat( *ubw )
-        lbg = ca.vertcat( *lbg )
-        ubg = ca.vertcat( *ubg )
-        
-        #   Solve the NLP
-        sol = solver( x0 = w0, lbx = lbw, ubx = ubw, lbg = lbg, ubg = ubg )
-
-        return sol"""

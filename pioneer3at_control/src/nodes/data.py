@@ -27,7 +27,7 @@ if __name__ == '__main__':
     distancePub = rospy.Publisher( '/pioneer3at/distance', Float64, queue_size = 1 )            #   '/pioneer3at/distance' -> topic for distance made by the robot            
 
     #   Waiting for permission to initialize node
-    while( rospy.get_param("/init") != common.data - 1 ):
+    while( rospy.get_param("/init") > common.data ):
         continue
 
     print( "[data.py] It's active." )
@@ -47,7 +47,7 @@ if __name__ == '__main__':
 
             if( index == 1 ):
                 #   Change "/init" parameter in order to allow the following node to initialize
-                rospy.set_param( "/init", common.dataProc - 1 )
+                rospy.set_param( "/init", rospy.get_param("/init") - 1 )
             
             prevPose = pose
             

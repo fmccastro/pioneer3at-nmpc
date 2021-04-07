@@ -31,7 +31,7 @@ if __name__ == '__main__':
     pubPose = rospy.Publisher( '/pioneer3at/robotPose', pose3D, queue_size = 1 )                    #   '/pioneer3at/robotPose' -> topic for pose
 
     #   Waiting for permission to initialize node
-    while( rospy.get_param("/init") != common.poseSelector ):
+    while( rospy.get_param("/init") > common.poseSelector ):
         continue
     
     common._pauseFunction( "[poseSelector.py] Press [ENTER] to activate node." )
@@ -39,7 +39,7 @@ if __name__ == '__main__':
     print( "[poseSelector.py] It's active." )
 
     #   Change "/init" parameter in order to allow the following node to initialize
-    rospy.set_param( "/init", common.poseSelector - 1 )
+    rospy.set_param( "/init", rospy.get_param("/init") - 1 )
 
     if( common.terraOnOff ):
 

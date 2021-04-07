@@ -27,7 +27,7 @@ if __name__ == '__main__':
 
     model = Model( Nx = common.NbStates, Nu = common.NbControls,\
                     ode = common._ode, J = common._costFunction, controlIntervals = common.N,\
-                        weightMatrix_1 = common.Q, weightMatrix_2 = common.R, samplingTime = common.Ts, spaceSetLowerBounds = common.X_lb, spaceSetUpperBounds = common.X_ub,\
+                        weightMatrix_1 = common.Q, weightMatrix_2 = common.R, samplingTime = common.Ts, intAcc = common.intAccuracy, spaceSetLowerBounds = common.X_lb, spaceSetUpperBounds = common.X_ub,\
                              controLowerBounds = common.U_lb, controlUpperBounds = common.U_ub, transMethod = common.transMet, optimization = common.optType, gpOnOff = common.gpOnOff )
     
     goalPoint = common.goalPoint * ( common.mapLength / common.img.shape[0] ) - common.mapLength/2
@@ -49,7 +49,7 @@ if __name__ == '__main__':
     optTimePub = rospy.Publisher( '/pioneer3at/optTime', Float64, queue_size = 1 )              #   '/pioneer3at/optTime' -> topic for optimization time
     pRefPub = rospy.Publisher( '/pioneer3at/pRef', poseRef, queue_size = 1 )                    #   '/pioneer3at/error' -> topic for error elements to publish   
 
-    while( rospy.get_param("/init") != common.nmpc ):
+    while( rospy.get_param("/init") > common.nmpc ):
         continue
     
     common._pauseFunction( "[nmpc.py] Press [ENTER] to activate node." )
@@ -209,7 +209,7 @@ if __name__ == '__main__':
     start = time.time()
 
     #   Set "/init" parameter to zero to anounce simulation started ( if "/init" = 0 it means the simulation started )
-    rospy.set_param( "/init", common.nmpc - 1 )
+    rospy.set_param( "/init", rospy.get_param("/init") - 1 )
 
     lastLookAheadPoint = 0
     lastFracIndex = 0
@@ -233,17 +233,15 @@ if __name__ == '__main__':
 
             if( flag ):
                 #   Decrease "/init" parameter to enable [data.py] node working mode
-                rospy.set_param( "/init", common.data - 1 )
+                rospy.set_param( "/init", rospy.get_param("/init") - 1 )
                 flag = False
 
             ### Optimization beginning ###############################################################################################################################
 
             #   Path-tracking
             if( common.refType == 0 ):
-                refList = ref.tolist()
-                refList = sum( refList, [] )
 
-                lastLookAheadPoint, lastFracIndex = pathPlanning._lookAheadPoint( ref, lastLookAheadPoint, lastFracIndex, pose, 0.5 )
+                lastLookAheadPoint, lastFracIndex = pathPlanning._lookAheadPoint( ref, lastLookAheadPoint, lastFracIndex, pose, common.radiusLookAhead )
 
                 #   Direct Multiple Shooting
                 if( common.transMet == 0 ):
@@ -255,7 +253,7 @@ if __name__ == '__main__':
                         addPoints = ref.shape[0] - lastLookAheadPoint
                         reference.data = refList[ lastLookAheadPoint * common.NbStates: ( lastLookAheadPoint + addPoints ) * common.NbStates ]\
                                                     + refList[ -common.NbStates:  ] * ( common.N - addPoints )
-                    
+
                     else:
                         reference.data = refList[ lastLookAheadPoint * common.NbStates: ( lastLookAheadPoint + common.N ) * common.NbStates ]
                     
@@ -377,10 +375,11 @@ if __name__ == '__main__':
             actuation = model._selectCommand( solutionX )
 
             #   Retrieving the loop duration from its beginning till the end
-            cycleTime.data = time.time() - cycleStart                                    
+            cycleEnd = time.time()
+            cycleTime.data = cycleEnd - cycleStart                                    
 
             #   Checking the clock timing since the beginning of simulation
-            simClock = time.time() - start
+            simClock = cycleTime.data - start
             
             stepPub.publish( k )                                        #   Number of optimizations counter // Number of optimizations = k + 1 
             horPub.publish( horizon )                                   #   Publish optimized variables sequence

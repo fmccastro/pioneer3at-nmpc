@@ -30,14 +30,17 @@ class LGP_Common:
 class Common:
 
     """ Nodes Initialization """
-    nmpc = 1                                                            #   Node [nmpc] initialization order                                                         
     poseSelector = 2                                                    #   Node [poseSelector] initialization order
-    data = 0                                                            #   Node [data] initialization order
-    dataProc = -1                                                       #   Node [dataProc] initialization order
+    nmpc = 1                                                            #   Node [nmpc] initialization order
+    markers = 0                                                         #   Node [markers] initialization order
+    data = -1                                                           #   Node [data] initialization order
+    dataProc = -2                                                       #   Node [dataProc] initialization order
 
     """ System Parameters """
-    Ts = 0.13                                                           #   Sampling Time
+    Ts = 0.05                                                           #   Sampling Time
+    fixedTs = True                                                      #   Variable sampling time
     N = 10                                                              #   Control Intervals
+    intAccuracy = 4                                                     #   Integrator Accuracy
     NbStates = 3                                                        #   Number of States
     NbControls = 2                                                      #   Number of Controls
     mapLength = 50.0                                                    #   Square Map dimension
@@ -73,6 +76,8 @@ class Common:
                 [ 340, 115 ]
                                     ]
     
+    radiusLookAhead = 0.2
+    
     """ Grayscale image from the terrain """
     img = cv.imread( "marsYard/materials/textures/heightmap.jpg", cv.IMREAD_GRAYSCALE )
     
@@ -80,13 +85,13 @@ class Common:
     heightProportion = 2.0/255
     
     """ Parameter parameterization factor for path tracking """
-    parameterSpeed = 0.001                                     #   For path tracking
+    parameterSpeed = 0.7 * Ts                                  #   For path tracking
     parameterSpeed_FM = 0.1                                    #   For fast marching
 
     """
         Reference Pose: 0 -> true pose (from Gazebo) 
                         1 -> fused pose ( IMU + Odometry) from robot_localization package
-    """                 
+    """
     poseType = 0
 
     """
@@ -112,10 +117,11 @@ class Common:
                                     #   1   -> Direct Single Shooting (DSS)
     
     """ Optimization type """
-    optType = 0                     #   0   -> SQP method
+    optType = 4                     #   0   -> SQP method
                                     #   1   -> IPOPT method
                                     #   2   -> QRSQP method
                                     #   3   -> QRSQP method + jit
+                                    #   4   -> SQP method + jit
     
     """ Enable/Disable Gaussian Processes """
     gpOnOff = False                                                      #   On (True), Off (False)

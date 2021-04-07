@@ -188,7 +188,7 @@ if __name__ == '__main__':
     r = rospy.Rate( 1 / common.Ts )
 
     #   Waiting for simulation to start in order to publish visualization markers
-    while( rospy.get_param( "/init" ) != 0 ):
+    while( rospy.get_param( "/init" ) > common.markers ):
         continue
 
     print( "[markers.py] It's active." )

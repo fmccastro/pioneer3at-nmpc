@@ -190,9 +190,21 @@ class Planner:
             x = path[ :, 0 ]
             y = path[ :, 1 ]
 
-            tck, u = interpolate.splprep( [ x, y ], s = 0 ) 
-            unew = np.arange( 0, 1.01, self.parameterVel )
+            tck, u = interpolate.splprep( [ x, y ], s = 0 )
 
+            unew = np.arange( 0, 1.0, 0.000001 )
+            out = interpolate.splev( unew, tck )
+
+            index = 0
+            distance = 0
+
+            while( index < out[0].shape[0] - 1 ):
+                distance += math.sqrt( math.pow( out[ 0 ][ index + 1 ] - out[ 0 ][ index ], 2 ) + math.pow( out[ 1 ][ index + 1 ] - out[ 1 ][ index ], 2 ) )
+                index += 1
+            
+            intervals = distance / ( self.parameterVel )
+            
+            unew = np.arange( 0, 1.0, 1.0 / intervals )
             out = interpolate.splev( unew, tck )
 
             i = 0
