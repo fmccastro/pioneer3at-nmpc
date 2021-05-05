@@ -237,11 +237,12 @@ class Planner:
 
         return math.sqrt( ( point1.x - point2[0] )**2 + ( point1.y - point2[1] )**2 )
     
-    def _lookAheadPoint( self, path, lastLookAheadPoint, lastFracIndex, pose, radius ):
+    def _lookAheadPoint( self, path, lastLookAheadPoint, lastFracIndex, pose, radius, maxLoopCycles ):
 
         index = lastLookAheadPoint
+        count = 0
 
-        while( index + 1 < path.shape[ 0 ] ):
+        while( index + 1 < path.shape[ 0 ] and count < maxLoopCycles ):
             
             d = np.array( [ path[ index + 1, 0 ], path[ index + 1, 1 ] ] ) - np.array( [ path[ index, 0 ], path[ index, 1 ] ] )
             f = np.array( [ path[ index, 0 ], path[ index, 1 ] ] ) - np.array( [ pose.x, pose.y ] )
@@ -262,16 +263,17 @@ class Planner:
                 t1 = ( -b - discriminant ) / ( 2 * a )
                 t2 = ( -b + discriminant ) / ( 2 * a )
 
-                if( t1 >= 0 and t1 <= 1 and index + t1 > lastFracIndex ):
+                if( t1 >= 0 and t1 <= 1 ):
                     return index + 1, index + t1
                 
-                if( t2 >= 0 and t2 <= 1 and index + t2 > lastFracIndex ):
+                if( t2 >= 0 and t2 <= 1 ):
                     return index + 1, index + t2
-                
+  
             index += 1
+            count += 1
 
         return lastLookAheadPoint, lastFracIndex
-
+        
     def _showPath( self, points ):
 
         checkpoints = np.array( self.path )

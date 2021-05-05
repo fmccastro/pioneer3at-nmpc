@@ -7,9 +7,9 @@
     <arg name = "x" value = "-5.85" />
     <arg name = "y" value = "-17.18" />
     <arg name = "z" value = "0.0" />
-    <arg name = "roll" value = "0" />
-    <arg name = "pitch" value = "0" />
-    <arg name = "yaw" value = "0" />
+    <arg name = "roll" value = "0.0" />
+    <arg name = "pitch" value = "0.0" />
+    <arg name = "yaw" value = "0.0" />
 
     <arg name = "paused"      default = "false"/>
     <arg name = "use_sim_time"  default = "true"/>

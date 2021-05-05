@@ -20,12 +20,15 @@ os.chdir("/home/fmccastro/Tese_RoverNavigation/ROS_workspaces/wsPy3/src/pioneer3
 class LGP_Common:
 
     select = True
-    nbTrainingPoints = 50
-    nbInputs = 5
+    nbTrainingPoints = 1000
+    nbInputs = 10
     nbOutputs = 3
     maxDataPts = 50                                                     #   Maximum Data Points per Local Model
     limitValue = [ 0.01, 0.01, 0.05 ]
     pred_limitValue = [ 0.5, 0.5, 0.7 ]
+
+    pathInputTrainingData = "/home/fmccastro/Tese_RoverNavigation/ROS_workspaces/wsPy3/src/pioneer3at_viz/trainingData/input.npy"
+    pathOutputTrainingData = "/home/fmccastro/Tese_RoverNavigation/ROS_workspaces/wsPy3/src/pioneer3at_viz/trainingData/output.npy"
 
 class Common:
 
@@ -37,14 +40,15 @@ class Common:
     dataProc = -2                                                       #   Node [dataProc] initialization order
 
     """ System Parameters """
-    Ts = 0.05                                                           #   Sampling Time
+    Ts = 0.2                                                            #   Sampling Time
     fixedTs = True                                                      #   Variable sampling time
-    N = 10                                                              #   Control Intervals
+    N = 50                                                              #   Control Intervals
+    maxCycles = 10                                                      #   Maximum number of cycles for look ahead point finder
     intAccuracy = 4                                                     #   Integrator Accuracy
     NbStates = 3                                                        #   Number of States
     NbControls = 2                                                      #   Number of Controls
     mapLength = 50.0                                                    #   Square Map dimension
-
+    
     """ Robot's admissible space set """
     X_lb = [ -mapLength/2.0, -mapLength/2.0, -math.pi ]
     X_ub = [ mapLength/2.0, mapLength/2.0, math.pi ]
@@ -76,7 +80,7 @@ class Common:
                 [ 340, 115 ]
                                     ]
     
-    radiusLookAhead = 0.2
+    radiusLookAhead = 0.5
     
     """ Grayscale image from the terrain """
     img = cv.imread( "marsYard/materials/textures/heightmap.jpg", cv.IMREAD_GRAYSCALE )
@@ -86,7 +90,7 @@ class Common:
     
     """ Parameter parameterization factor for path tracking """
     parameterSpeed = 0.7 * Ts                                  #   For path tracking
-    parameterSpeed_FM = 0.1                                    #   For fast marching
+    parameterSpeed_FM = 0.7 * Ts                               #   For fast marching
 
     """
         Reference Pose: 0 -> true pose (from Gazebo) 
@@ -99,13 +103,13 @@ class Common:
                                  1 -> trajectory
                                  2 -> fast marching path
     """
-    refType = 0
+    refType = 2
 
     """
         Cost map for fast marching gradient computation
     """
 
-    costMap = cv.imread( "marsYard/costMap_for_FM/heightmap_FM_1025_1.jpg", cv.IMREAD_GRAYSCALE )
+    costMap = cv.imread( "marsYard/costMap_for_FM/costMap_1025_12.jpg", cv.IMREAD_GRAYSCALE )
     
     """
         Minimum Distance the robot must be from the goal for the cycle to end
@@ -124,7 +128,7 @@ class Common:
                                     #   4   -> SQP method + jit
     
     """ Enable/Disable Gaussian Processes """
-    gpOnOff = False                                                      #   On (True), Off (False)
+    gpOnOff = True                                                      #   On (True), Off (False)
 
     """
         Local Gaussian Processes (LGP)

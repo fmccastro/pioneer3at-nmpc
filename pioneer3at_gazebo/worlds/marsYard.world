@@ -15,7 +15,7 @@
         </include>
 
         <include>
-            <uri>model://marsYard1</uri>
+            <uri>model://heightmap_mars</uri>
         </include>
     
     </world>

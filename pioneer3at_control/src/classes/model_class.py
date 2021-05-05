@@ -57,7 +57,7 @@ class Model:
         X0 = ca.MX.sym( 'X0', self.__Nx )
         X_Ref = ca.MX.sym( 'X0_Ref', self.__Nx )
         U = ca.MX.sym( 'U', self.__Nu )
-
+        
         X = X0
         Q = 0
 

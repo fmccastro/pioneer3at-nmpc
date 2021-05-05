@@ -4,11 +4,7 @@ from __future__ import division
 
 import gpflow, sys, math, pprint, time
 
-import matplotlib.pyplot as plt
-
 import numpy as np
-import tensorflow as tf
-
 from multiprocessing import Queue
 from dataclasses import dataclass, field
 from typing import List
@@ -52,77 +48,49 @@ class LGP_Record:
         return f'{self.__class__.__name__}({localModelsIndex})'
 
 class LGP:
-    def __init__( self, inputDimension, outputDimension, limitValue, maxNbDataPts ):
+    def __init__( self, inputDim, outputDim, limitValue, predLimitValue, nbTrainPts, maxNbDataPts ):
 
-        self.pointsCollected = 0
+        self.X_trainingPts = None
+        self.Y_trainingPts = None
 
-        self.inputDim = inputDimension
-        self.outputDim = outputDimension
+        self.trainingPointsNb = nbTrainPts
+        self.trainingPtsCollected = 0
 
-        self.inputFlag = True
-        self.outFlag = True
-
-        self.rawInputData = None
-        self.rawOutputData = None
+        self.inputDimension = inputDim
+        self.outputDimension = outputDim
 
         self.threshold = limitValue
+        self.predThreshold = predLimitValue
 
         self.maxNbDataPoints = maxNbDataPts
 
         weights = []
         self.kernel = []
-        self.gpModel = []
         self.localModelsNb = []
         self.localGPModels = []
 
-        for _ in range( self.inputDim ):
+        for i in range( self.inputDimension ):
             weights.append( 1.0 )
 
-        for _ in range( self.outputDim ):
+        for i in range( self.outputDimension ):
             self.localModelsNb += [ 0 ]
             self.localGPModels += [ LGP_Record() ]
-            #self.kernel += [ gpflow.kernels.SquaredExponential( lengthscales = weights ) + gpflow.kernels.White() ]
-            self.kernel += [ gpflow.kernels.SquaredExponential( lengthscales = weights ) ]
-
-    def _getOrientation( self, pose ):
-
-        return np.array( [ [ pose.roll, pose.pitch ] ] )
+            self.kernel += [ gpflow.kernels.SquaredExponential( lengthscales = weights ) + gpflow.kernels.White() ]
     
-    def _getVelocity( self, currentPose, previousPose, timeDifference ):
+    def _trainingPoints( self, input, output, option = 0 ): # OK
 
-        return np.array( [ [ math.sqrt( math.pow( currentPose.x - previousPose.x, 2 ) + math.pow( currentPose.y - previousPose.y, 2 ) ) / timeDifference, ( currentPose.yaw - previousPose.yaw ) / timeDifference ] ] )
+        if( option == 0 ):
 
-    def _getControls( self, actuation ):
-
-        return np.array( [ [ actuation.linear.x, actuation.angular.z ] ] )
-    
-    def _updateRawInData( self, input ):
-
-        if( self.inputFlag ):
-            self.rawInputData = input
-            self.inputFlag = False
+            self.X_trainingPts = np.array( input )
+            self.Y_trainingPts = np.array( output )
 
         else:
-            self.rawInputData = np.vstack( ( self.rawInputData, input ) )
 
-    def _updateRawOutData( self, output ):
+            self.X_trainingPts = np.vstack( ( self.X_trainingPts, input  ) )
+            self.Y_trainingPts = np.vstack( ( self.Y_trainingPts, output ) )
 
-        if( self.outFlag ):
-            self.rawOutputData = output
-            self.outFlag = False
-        
-        else:
-            self.rawOutputData = np.vstack( ( self.rawOutputData, output ) )
-    
-    def _trainingData( self ):
+        self.trainingPtsCollected += 1
 
-        return self.rawInputData, self.rawOutputData
-    
-    def _saveTrainingData( self, rawInput, rawOutput ):
-
-        self._rawInputData = rawInput
-        self._rawOutputData = rawOutput
-    
     def _loopLocalModels( self, input, index ): # OK
 
         """
@@ -150,14 +118,13 @@ class LGP:
                     output: 1 * self.outputDimension (numpy)
         """
 
-        for j in range( self.outputDim ):
+        for j in range( self.outputDimension ):
 
             if( self.localModelsNb[j] == 0 ):
 
                 k_new_scl = self.kernel[j]( input, input ).numpy()
 
-                #gram = np.array( k_new_scl ) + np.array( [ [ self.kernel[j].kernels[1].variance.numpy() ] ] )
-                gram = np.array( k_new_scl ) + np.array( [ [ self.gpModel[j].likelihood.variance.numpy() ] ] )
+                gram = np.array( k_new_scl ) + np.array( [ [ self.kernel[j].kernels[1].variance.numpy() ] ] )
 
                 alpha = np.linalg.inv( gram ) @ output[ 0, j ].reshape( 1, 1 )
 
@@ -185,18 +152,17 @@ class LGP:
                                                                                                                             output[ 0, j ].reshape(1, 1) ) )
 
                     self.localGPModels[j].localModelsIndex[maxIndex].center = np.mean( self.localGPModels[j].localModelsIndex[maxIndex].inputs,\
-                                                                                                                axis = 0 ).reshape( 1, self.inputDim )
+                                                                                                                axis = 0 ).reshape( 1, self.inputDimension )
 
                     k_new_scl = self.kernel[j]( input, input ).numpy()
 
-                    #kernel_var = self.kernel[j].kernels[1].variance.numpy()
-                    model_var = self.gpModel[j].likelihood.variance.numpy()
+                    kernel_var = self.kernel[j].kernels[1].variance.numpy()
 
                     cholesky = self.localGPModels[j].localModelsIndex[maxIndex].cholesky
 
                     l = self._forwardSubs( cholesky, K_new )
 
-                    self.localGPModels[j].localModelsIndex[maxIndex].cholesky = self._updateCholesky( cholesky, model_var, k_new_scl, l )
+                    self.localGPModels[j].localModelsIndex[maxIndex].cholesky = self._updateCholesky( cholesky, kernel_var, k_new_scl, l )
 
                     if( self.localGPModels[j].localModelsIndex[maxIndex].inputs.shape[0] > self.maxNbDataPoints ):
 
@@ -204,7 +170,7 @@ class LGP:
                         self.localGPModels[j].localModelsIndex[maxIndex].outputs = np.delete( self.localGPModels[j].localModelsIndex[maxIndex].outputs, 0, 0 )
 
                         self.localGPModels[j].localModelsIndex[maxIndex].center = np.mean( self.localGPModels[j].localModelsIndex[maxIndex].inputs,\
-                                                                                                                axis = 0 ).reshape( 1, self.inputDim )
+                                                                                                                axis = 0 ).reshape( 1, self.inputDimension )
                         
                         ch = self.localGPModels[j].localModelsIndex[maxIndex].cholesky
                         
@@ -220,8 +186,7 @@ class LGP:
 
                     k_new_scl = self.kernel[j]( input, input ).numpy()
 
-                    #gram = np.array( k_new_scl ) + np.array( [ [ self.kernel[j].kernels[1].variance.numpy() ] ] )
-                    gram = np.array( k_new_scl ) + np.array( [ [ self.gpModel[j].likelihood.variance.numpy() ] ] )
+                    gram = np.array( k_new_scl ) + np.array( [ [ self.kernel[j].kernels[1].variance.numpy() ] ] )
 
                     alpha = np.linalg.inv( gram ) @ output[ 0, j ].reshape(1, 1)
 
@@ -231,8 +196,8 @@ class LGP:
                     self.localGPModels[j].localModelsIndex += [ newlocalGP ]
                     self.localModelsNb[j] += 1
 
-        self.pointsCollected += 1
-    
+        self.trainingPtsCollected += 1
+
     def _buildInitialLocalModels( self ): # OK
 
         """
@@ -240,9 +205,7 @@ class LGP:
                             self._partitioning function. Each row is reshaped to 1 * N (numpy).
         """
 
-        for x, y in zip( self._rawInputData, self._rawOutputData ):
-            
-            print(x, y)
+        for x, y in zip( self.X_trainingPts, self.Y_trainingPts ):
 
             self._partitioning( x.reshape(1, x.shape[0] ), y.reshape(1, y.shape[0] ) )
 
@@ -250,38 +213,67 @@ class LGP:
         self._printLocalModel( 1 )
         self._printLocalModel( 2 )
 
+    def _collectTrainPts( self, input, output, queue, flag ): # OK
+    
+        """
+            inputs:
+                    input: ( 1 * self._inputDimension ) array (numpy)
+                    output: ( 1 * self._outputDimension ) array (numpy)
+
+            output:
+                    bool: True or False
+        """
+
+        if( self.trainingPtsCollected == 0 ):
+            self._trainingPoints( input, output )
+
+            if( flag ):
+                queue.put( list( self.localModelsNb ) )
+                queue.put( list( self.localGPModels ) )
+
+            if( self.trainingPtsCollected < self.trainingPointsNb ):
+                return False
+            
+            elif( self.trainingPtsCollected == self.trainingPointsNb ):
+                return True
+        
+        elif( self.trainingPtsCollected < self.trainingPointsNb ):
+            self._trainingPoints( input, output, option = 1 )
+
+            if( flag ):
+                queue.put( list( self.localModelsNb ) )
+                queue.put( list( self.localGPModels ) )
+
+            if( self.trainingPtsCollected < self.trainingPointsNb ):
+                return False
+            
+            elif( self.trainingPtsCollected == self.trainingPointsNb ):
+                return True
+
+        elif( self.trainingPtsCollected >= self.trainingPointsNb ):
+
+            self._partitioning( input, output )
+            
+            if( flag ):
+                queue.put( list( self.localModelsNb ) )
+                queue.put( list( self.localGPModels ) )
+
+            return False
+
     def _hyperParametersOpt( self ): # OK
 
         opt = gpflow.optimizers.Scipy()
+        m = []
 
-        ###
+        for j in range( self.outputDimension ):
 
-        self.gpModel += [ gpflow.models.GPR( data = ( self._rawInputData, self._rawOutputData[ :, 0 ].reshape( -1, 1 ) ), kernel = self.kernel[0], mean_function = None ) ]
+            m += [ gpflow.models.GPR( data = ( self.X_trainingPts, self.Y_trainingPts[ :, j ].reshape( -1, 1 ) ), kernel = self.kernel[j], mean_function = None ) ]
 
-        opt.minimize( self.gpModel[0].training_loss, self.gpModel[0].trainable_variables, method = "BFGS", options = dict( maxiter = 100 ) )
+            opt.minimize( m[j].training_loss, m[j].trainable_variables, options = dict( maxiter = 100 ) )
 
-        print_summary( self.gpModel[0] )
-
-        time.sleep(2)
+            time.sleep(2)
         
-        ###
-
-        self.gpModel += [ gpflow.models.GPR( data = ( self._rawInputData, self._rawOutputData[ :, 1 ].reshape( -1, 1 ) ), kernel = self.kernel[1], mean_function = None ) ]
-
-        opt.minimize( self.gpModel[1].training_loss, self.gpModel[1].trainable_variables, method = "BFGS", options = dict( maxiter = 100 ) )
-
-        time.sleep(2)
-
-        print_summary( self.gpModel[1] )
-
-        ###
-
-        self.gpModel += [ gpflow.models.GPR( data = ( self._rawInputData, self._rawOutputData[ :, 2 ].reshape( -1, 1 ) ), kernel = self.kernel[2], mean_function = None ) ]
-
-        opt.minimize( self.gpModel[2].training_loss, self.gpModel[2].trainable_variables, method = "BFGS", options = dict( maxiter = 100 ) )
-        print_summary( self.gpModel[2] )
-
-        time.sleep(2)
+            print_summary( self.kernel[j] )
 
     def _forwardSubs( self, A, B ): # OK
 
@@ -309,7 +301,7 @@ class LGP:
         X = np.array( X ).reshape( len(X), 1 )
 
         return X
-    
+
     def _backSubs( self, A, B ): # OK
 
         """
@@ -337,7 +329,7 @@ class LGP:
             X[ i, 0 ] = X[ i, 0 ] / A[ i, i ]
 
         return X
-    
+
     def _updateCholesky( self, prevCholesky, variance, k_new, l ): # OK
 
         """
@@ -357,7 +349,7 @@ class LGP:
         L_new = np.block( [ [ prevCholesky, np.zeros( ( prevCholesky.shape[0], 1 ) ) ], [ np.transpose( l ), L_star ] ] )
 
         return L_new
-    
+
     def _predictionVector( self, cholesky, output ): # OK
 
         """
@@ -391,7 +383,7 @@ class LGP:
 
         for row in xq:
 
-            row = row.reshape( 1, self.inputDim )
+            row = row.reshape( 1, self.inputDimension )
 
             res += [ self.kernel[state].kernels[0].variance.numpy() * exp( -0.5 * mtimes( mtimes( xp - row, W ), transpose( xp - row ) ) ) ]
         
@@ -399,6 +391,41 @@ class LGP:
 
         return res
     
+    """def _closestModels( self, state, test, max ):
+
+        wk = []
+        yk = []
+
+        distMatrix = []
+
+        flag = True
+        
+        for i in range( self.localModelsNb[state] ):
+
+            if( flag ):
+
+                distMatrix += [ self._kernelSE( state, test, self.localGPModels[state].localModelsIndex[i].center ),\
+                            mtimes( self._kernelSE( state, test, self.localGPModels[state].localModelsIndex[i].inputs ), self.localGPModels[state].localModelsIndex[i].predictionVector ) ]
+
+                distMatrix = np.array( distMatrix )
+
+                flag = False
+            
+            else:
+
+                dist = self._kernelSE( state, test, self.localGPModels[state].localModelsIndex[i].center )
+
+                for idx in range( distMatrix.shape[0] ):
+                
+                    distMatrix = if_else( dist > distMatrix[ idx, 0 ],\
+                        np.vstack( ( np.array( [ [ dist, mtimes( self._kernelSE( state, test, self.localGPModels[state].localModelsIndex[i].inputs ),\
+                                                                    self.localGPModels[state].localModelsIndex[i].predictionVector ) ] ] ), distMatrix ) ),\
+                                                                        )
+
+        dist = np.array( dist )
+
+        dist = dist[ dist[ :, 0 ].argsort() ]"""
+
     def _prediction( self, state, test ):
 
         wk = []
@@ -423,8 +450,8 @@ class LGP:
 
         y = dot( wk, yk ) / sum_wk
         
-        return y
-    
+        return y 
+
     def _rankOneUpdate(self, L, x ):
 
         """
@@ -449,10 +476,14 @@ class LGP:
             x[ i + 1:N] = c * x[ i + 1:N ] - s * L[ i, i + 1:N ]
 
         return L
+
+    def _trainingPtsCollected( self ):
+        return self.trainingPtsCollected 
     
-    def _pointsCollected( self ):
-        return self.pointsCollected 
-    
+    def _updateLGP( self, input1, input2 ):
+        self.localModelsNb = input1
+        self.localGPModels = input2
+
     def _printLocalModel( self, state ):
 
         print("\n")

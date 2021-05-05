@@ -1,0 +1,12 @@
+<?xml version="1.0" ?>
+<launch>
+
+    <node name = "trainGP" pkg = "pioneer3at_control" type = "trainGP.py" output = "screen" />
+    <node name = "poseSelectorTrainGP" pkg = "pioneer3at_control" type = "poseSelectorTrainGP.py" output = "screen" />
+    <node name = "msgTransformer" pkg = "pioneer3at_control" type = "msgTransformer.py" output = "screen" />
+
+    <rosparam>
+        init: 2     <!-- Parameter to initialize nodes by descending order -->
+    </rosparam>
+
+</launch>

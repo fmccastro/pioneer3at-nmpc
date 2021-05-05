@@ -35,6 +35,9 @@ if __name__ == '__main__':
     pathPlanning = Planner( Path = common.path, NbStates = common.NbStates, NbControls = common.NbControls, Image = common.img, costMap = common.costMap, heightPx = common.heightProportion,\
                                 paramVel = common.parameterSpeed, paramVelFM = common.parameterSpeed_FM, length = common.mapLength, option = common.refType,\
                                     samplingTime = common.Ts, goal = goalPoint )
+    
+    if( common.gpOnOff ):
+        gp = LGP( inputDimension = common.LGP.nbInputs, outputDimension = common.LGP.nbOutputs, limitValue = common.LGP.limitValue, maxNbDataPts = common.LGP.maxDataPts )
 
     rospy.init_node( 'nmpc', anonymous = True )
 
@@ -68,7 +71,7 @@ if __name__ == '__main__':
 
         grad_X, grad_Y = pathPlanning._fastMarching()
 
-        #pathPlanning._showMap_FM( grad_X, grad_Y, pose.linear.x, pose.linear.y )
+        pathPlanning._showMap_FM( grad_X, grad_Y, pose.x, pose.y )
 
     elif( common.refType == 1 ):
 
@@ -83,6 +86,16 @@ if __name__ == '__main__':
         ref = np.hstack( ( ref, pathPlanning._pathOrientation( ref ) ) )
 
         pathPlanning._showPath( ref )
+    
+    #   Build Initial Local Models
+    if( common.gpOnOff ):
+        
+        inputTrainingData = np.load( common.LGP.pathInputTrainingData )
+        outputTrainingData = np.load( common.LGP.pathOutputTrainingData )
+        
+        gp._saveTrainingData( inputTrainingData, outputTrainingData )
+        gp._hyperParametersOpt()
+        gp._buildInitialLocalModels()
 
     common._pauseFunction("[nmpc.py] About to start moving.")
 
@@ -213,6 +226,7 @@ if __name__ == '__main__':
 
     lastLookAheadPoint = 0
     lastFracIndex = 0
+    #factor = 0
 
     flag = True
 
@@ -222,7 +236,8 @@ if __name__ == '__main__':
             cycleStart = time.time()
 
             k.data += 1
-            
+
+            prevPose = pose
             pose = common.robotPose
 
             #   Publish pose and respective reference for node [data.py] to compute error
@@ -241,11 +256,11 @@ if __name__ == '__main__':
             #   Path-tracking
             if( common.refType == 0 ):
 
-                lastLookAheadPoint, lastFracIndex = pathPlanning._lookAheadPoint( ref, lastLookAheadPoint, lastFracIndex, pose, common.radiusLookAhead )
+                lastLookAheadPoint, lastFracIndex = pathPlanning._lookAheadPoint( ref, lastLookAheadPoint, lastFracIndex, pose, common.radiusLookAhead, common.maxCycles )
 
                 #   Direct Multiple Shooting
                 if( common.transMet == 0 ):
-
+                
                     initialGuess = ca.vertcat( solutionX[ common.NbStates + common.NbControls: ], solutionX[ -( common.NbStates + common.NbControls ): ] )
 
                     #   In case the the reference sequence surpasses the array length, add more poses to the reference equal to the last one
@@ -379,7 +394,7 @@ if __name__ == '__main__':
             cycleTime.data = cycleEnd - cycleStart                                    
 
             #   Checking the clock timing since the beginning of simulation
-            simClock = cycleTime.data - start
+            simClock = cycleEnd - start
             
             stepPub.publish( k )                                        #   Number of optimizations counter // Number of optimizations = k + 1 
             horPub.publish( horizon )                                   #   Publish optimized variables sequence
@@ -398,7 +413,7 @@ if __name__ == '__main__':
 
     nextCommand.publish(actuation)
 
-    common._pauseFunction("[nmpc.py] Simulation ended.")
+    print("[nmpc.py] Simulation ended.")
 
     nodes = os.popen("rosnode list").readlines()
 

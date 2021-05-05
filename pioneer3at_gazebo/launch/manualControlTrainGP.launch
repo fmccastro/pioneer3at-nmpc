@@ -1,0 +1,12 @@
+<launch>
+
+    <!--<node pkg="teleop_twist_keyboard" type="teleop_twist_keyboard.py" name="teleop_twist_keyboard" output = "screen" >
+        <remap from = "/cmd_vel" to = "/pioneer3at/cmd_vel_in" />
+    </node>-->
+
+    <!-- Fusion of sensors to yield filtered pose -->
+    <include file = "$(find teleop_twist_joy)/launch/teleop.launch" >
+         <arg name = "cmd_topic" value = "/pioneer3at/cmd_vel" />
+    </include>
+
+</launch>

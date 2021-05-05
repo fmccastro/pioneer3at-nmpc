@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import rospy
 import numpy as np
 
@@ -6,68 +6,17 @@ from matplotlib import pyplot as plt
 from matplotlib.colors import LogNorm
 
 from sklearn.gaussian_process import GaussianProcessRegressor
-from sklearn.gaussian_process.kernels import RBF, WhiteKernel
+from sklearn.gaussian_process.kernels import RBF, WhiteKernel, ConstantKernel
 
 if __name__ == '__main__':
 
-    #rospy.init_node('odometry', anonymous = True)
-    
-    rng = np.random.RandomState( 0 )
-    X = rng.uniform(0, 5, 20)[:, np.newaxis]                                        #[:, np.newaxis]
-    Y = 0.5 * np.sin( 3 * X[:, 0] ) + rng.normal( 0, 0.5, X.shape[0] )
-    
-    # First run
-    plt.figure()
-    kernel = 1.0 * RBF( length_scale = 100, length_scale_bounds = (1e-2, 1e3) ) \
-      + WhiteKernel( noise_level = 1, noise_level_bounds = (1e-10, 1e+1) )
-    gp = GaussianProcessRegressor( kernel = kernel, alpha = 0.0 ).fit(X, Y)
-    
-    X_ = np.linspace(0, 5, 100)
-    y_mean, y_cov = gp.predict(X_[:, np.newaxis], return_cov = True)
-    
-    plt.plot(X_, y_mean, 'k', lw = 3, zorder = 9)
-    plt.fill_between(X_, y_mean - np.sqrt(np.diag(y_cov)), y_mean + np.sqrt(np.diag(y_cov)), alpha = 0.5, color = 'k')
-    plt.plot(X_, 0.5*np.sin(3*X_), 'r', lw=3, zorder = 9)
-    plt.scatter(X[:, 0], Y, c='r', s=50, zorder = 10, edgecolors=(0,0,0))
-    plt.title("Initial: %s\nOptimum: %s\nLog-Marginal-Likelihood: %s"
-              % (kernel, gp.kernel_,
-                gp.log_marginal_likelihood(gp.kernel_.theta)))
-    plt.tight_layout()
-    
-    # Second run
-    """plt.figure()
-    kernel = 1.0 * RBF(length_scale=1.0, length_scale_bounds=(1e-2, 1e3)) \
-      + WhiteKernel(noise_level=1e-5, noise_level_bounds=(1e-10, 1e+1))
-    gp = GaussianProcessRegressor(kernel=kernel, alpha=0.0).fit(X, Y)
+    inputData = np.load("/home/fmccastro/Tese_RoverNavigation/ROS_workspaces/wsPy3/src/pioneer3at_viz/trainingData/input.npy")
+    outputData = np.load("/home/fmccastro/Tese_RoverNavigation/ROS_workspaces/wsPy3/src/pioneer3at_viz/trainingData/output.npy")
 
-    X_ = np.linspace(0, 5, 100)
-    y_mean, y_cov = gp.predict(X_[:, np.newaxis], return_cov = True)
-    
-    plt.plot(X_, y_mean, 'k', lw = 3, zorder = 9)
-    plt.fill_between(X_, y_mean - np.sqrt(np.diag(y_cov)), y_mean + np.sqrt(np.diag(y_cov)), alpha = 0.5, color = 'k')
-    plt.scatter(X[:, 0], Y, c='r', s=50, zorder=10, edgecolors=(0, 0, 0))
-    plt.title("Initial: %s\nOptimum: %s\nLog-Marginal-Likelihood: %s"
-              % (kernel, gp.kernel_, gp.log_marginal_likelihood(gp.kernel_.theta)))
-    plt.tight_layout()
+    kernel = ConstantKernel() * RBF( length_scale = np.array( [ 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 ] ) ) + WhiteKernel()
 
-    # Plot LML landspace
-    plt.figure()
-    theta0 = np.logspace(-2, 3, 49)
-    theta1 = np.logspace(-2, 0, 50)
-    Theta0, Theta1 = np.meshgrid(theta0, theta1)
-    print(Theta0)
-    print(Theta1)
+    print("A")
 
-    
-    LML = [[gp.log_marginal_likelihood(np.log([0.36, Theta0[i, j], Theta1[i, j]]))
-            for i in range(Theta0.shape[0])] for j in range(Theta0.shape[1])]
-    LML = np.array(LML).T
-    
-    vmin, vmax = (-LML).min(), (-LML).max()
-    vmax = 50
-    level = np.around( np.logspace(np.log10(vmin), np.log10(vmax), 50), decimals = 1)
+    gpr1 = GaussianProcessRegressor( kernel = kernel, n_restarts_optimizer = 0, normalize_y = True ).fit(inputData, outputData[:, 0] )
 
-    print(level)
-    """
-
-    plt.show(block = True)
+    print(gpr1.log_marginal_likelihood( theta = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0] ) )
