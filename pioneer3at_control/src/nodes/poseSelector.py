@@ -29,6 +29,7 @@ if __name__ == '__main__':
     rospy.Subscriber( '/filtered/odometry', Odometry, common._poseCallback, 1 )                     #   '/filtered/odometry' -> topic which collects fusioned data from the sensors of the robot 
 
     pubPose = rospy.Publisher( '/pioneer3at/robotPose', pose3D, queue_size = 1 )                    #   '/pioneer3at/robotPose' -> topic for pose
+    pubVel = rospy.Publisher( '/pioneer3at/robotVel', Twist, queue_size = 1 )                       #   '/pioneer3at/robotVel' -> topic for robot velocity
 
     #   Waiting for permission to initialize node
     while( rospy.get_param("/init") > common.poseSelector ):
@@ -52,13 +53,16 @@ if __name__ == '__main__':
             print( "[poseSelector.py] Terramechanics sim is ON." + res.message )
     
     pose = pose3D()
+    vel = Twist()
 
     while( not rospy.is_shutdown() ):
         try:
 
             pose = common._selectPoseType( common.poseType )
+            vel = common._selectVelType( common.poseType )
 
             pubPose.publish( pose )
+            pubVel.publish( vel )
 
         except(tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
             pass

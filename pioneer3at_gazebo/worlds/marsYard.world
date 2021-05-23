@@ -1,5 +1,5 @@
 <?xml version="1.0" ?>
-<sdf version = "1.5" >
+<sdf version = "1.6" >
     <world name = "mars">
 
         <physics type = "ode" >
@@ -15,7 +15,7 @@
         </include>
 
         <include>
-            <uri>model://heightmap_mars</uri>
+            <uri>model://test_field_one</uri>
         </include>
     
     </world>

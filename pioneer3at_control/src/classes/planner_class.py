@@ -40,7 +40,6 @@ class Planner:
         self.goal = goal
 
         if( self.option == 2 ):
-
             self.img_costMap = cv.flip( costMap, 0 ) * heightPx
             self.X_costMap, self.Y_costMap = np.meshgrid( np.linspace( -length/2, length/2, costMap.shape[0] ), np.linspace( -length/2, length/2, costMap.shape[1] ) )
 

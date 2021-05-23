@@ -27,7 +27,7 @@ if __name__ == '__main__':
     rospy.Subscriber( '/pioneer3at/clock', Float64, common._Float64Callback, 0 )                                #   '/pioneer3at/clock'         -> topic for simulation time counting ( since the robot starts moving )
     rospy.Subscriber( '/pioneer3at/cycleTime', Float64, common._Float64Callback, 1 )                            #   '/pioneer3at/cycleTime'     -> topic for cycle iteration timing count
     rospy.Subscriber( '/pioneer3at/optTime', Float64, common._Float64Callback, 2 )                              #   '/pioneer3at/optTime'       -> topic for optimization time
-    rospy.Subscriber( '/pioneer3at/cmd_vel', Twist, common._TwistCallback )                                     #   '/pioneer3at/cmd_vel'       -> topic for pose
+    rospy.Subscriber( '/pioneer3at/cmd_vel', Twist, common._TwistCallback, 0 )                                  #   '/pioneer3at/cmd_vel'       -> topic for pose
     rospy.Subscriber( '/pioneer3at/distance', Float64, common._Float64Callback, 3 )                             #   '/pioneer3at/distance'      -> topic for distance made by the robot 
     rospy.Subscriber( '/pioneer3at/error', Float64MultiArray, common._Float64MultiArrayCallback, 2 )            #   '/pioneer3at/error'         -> topic to publish error of the robot (distance to desired reference)
 

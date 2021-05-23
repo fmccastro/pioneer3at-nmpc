@@ -21,14 +21,69 @@ class LGP_Common:
 
     select = True
     nbTrainingPoints = 1000
-    nbInputs = 10
-    nbOutputs = 3
-    maxDataPts = 50                                                     #   Maximum Data Points per Local Model
-    limitValue = [ 0.01, 0.01, 0.05 ]
+    gpModel = 1
+    nbInputs = 6                                                            #   Number of prediction variables
+    nbOutputs = 3                                                           #   Number of prediction states
+    maxLocalModels = 3                                                      #   For selection of closer models
+    maxDataPts = 250                                                        #   Maximum Data Points per Local Model
+    limitValue = [ 0.002, 0.0001, 0.33 ]
     pred_limitValue = [ 0.5, 0.5, 0.7 ]
 
-    pathInputTrainingData = "/home/fmccastro/Tese_RoverNavigation/ROS_workspaces/wsPy3/src/pioneer3at_viz/trainingData/input.npy"
-    pathOutputTrainingData = "/home/fmccastro/Tese_RoverNavigation/ROS_workspaces/wsPy3/src/pioneer3at_viz/trainingData/output.npy"
+    """
+        Define (non-fixed) prediction variables here
+    """
+    
+    if( gpModel == 1 ):
+
+        """
+            Additional initial parameters
+        """
+
+        ###   For function definition
+        preCtrl_ini_def = ca.SX.sym( 'preCtrl_ini_def', 2 )
+        preVel_ini_def = ca.SX.sym( 'preVel_ini_def', 2 )
+        nowVel_ini_def = ca.SX.sym( 'nowVel_ini_def', 2 )
+
+        paramGP_def = ca.vertcat( preCtrl_ini_def, preVel_ini_def, nowVel_ini_def )
+
+        ####################
+
+        preCtrl_ini = ca.SX.sym( 'preCtrl_ini', 2 )
+        preVel_ini = ca.SX.sym( 'preVel_ini', 2 )
+        nowVel_ini = ca.SX.sym( 'nowVel_ini', 2 )
+
+        paramGP = ca.vertcat( preCtrl_ini, preVel_ini, nowVel_ini )
+        ######
+
+        """
+            Prediction variables
+        """
+        
+        ### For function definition
+        preVel_def = ca.SX.sym( 'preVel_def', 2 )
+        preCtrl_def = ca.SX.sym( 'preCtrl_def', 2 )
+        nowCtrl_def = ca.SX.sym( 'nowCtrl_def', 2 )
+
+        predGP_def = ca.vertcat( preVel_def, preCtrl_def, nowCtrl_def)
+            
+        ####################
+
+        preVel = ca.SX.sym( 'preVel', 2 )
+        preCtrl = ca.SX.sym( 'preCtrl', 2 )
+        nowCtrl = ca.SX.sym( 'nowCtrl', 2 )
+
+        predGP = ca.vertcat( preVel, preCtrl, nowCtrl )
+        ######
+
+    ############################################################################################################
+
+    pathInputTrainingData_np = "/home/fmccastro/Tese_RoverNavigation/ROS_workspaces/wsPy3/src/pioneer3at_viz/trainingData/trainingField1/gp_model_" + str(gpModel) + "/" + str(nbTrainingPoints) + "_training_points/input.npy"
+    pathOutputTrainingData_np = "/home/fmccastro/Tese_RoverNavigation/ROS_workspaces/wsPy3/src/pioneer3at_viz/trainingData/trainingField1/gp_model_" + str(gpModel) + "/" + str(nbTrainingPoints) + "_training_points/output.npy"
+
+    pathInputTrainingData_mat = "/home/fmccastro/Tese_RoverNavigation/ROS_workspaces/wsPy3/src/pioneer3at_viz/trainingData/trainingField1/gp_model_" + str(gpModel) + "/" + str(nbTrainingPoints) + "_training_points/input.mat"
+    pathOutputTrainingData_mat = "/home/fmccastro/Tese_RoverNavigation/ROS_workspaces/wsPy3/src/pioneer3at_viz/trainingData/trainingField1/gp_model_" + str(gpModel) + "/" + str(nbTrainingPoints) + "_training_points/output.mat"
+
+    pathModel = "/home/fmccastro/Tese_RoverNavigation/ROS_workspaces/wsPy3/src/pioneer3at_viz/trainingData/trainingField1/gp_model_" + str(gpModel) + "/" + str(nbTrainingPoints) + "_training_points/gp.pickle"
 
 class Common:
 
@@ -40,9 +95,9 @@ class Common:
     dataProc = -2                                                       #   Node [dataProc] initialization order
 
     """ System Parameters """
-    Ts = 0.2                                                            #   Sampling Time
+    Ts = 0.1                                                            #   Sampling Time
     fixedTs = True                                                      #   Variable sampling time
-    N = 50                                                              #   Control Intervals
+    N = 20                                                              #   Control Intervals
     maxCycles = 10                                                      #   Maximum number of cycles for look ahead point finder
     intAccuracy = 4                                                     #   Integrator Accuracy
     NbStates = 3                                                        #   Number of States
@@ -58,8 +113,8 @@ class Common:
     U_ub = [  0.7,  140 * math.pi / 180 ]                               #   Controls upper bound
 
     """ Penalty Matrices """
-    Q = ca.diag( ca.MX( [ 0.8, 0.8, 0.8 ] ) )                           #   States Matrix
-    R = ca.diag( ca.MX( [ 0.1, 0.1 ] ) )                                #   Controls Matrix
+    Q = ca.diag( ca.SX( [ 0.8, 0.8, 0.8 ] ) )                           #   States Matrix
+    R = ca.diag( ca.SX( [ 0.1, 0.1 ] ) )                                #   Controls Matrix
 
     """ Goal Point on [Px] units """
     goalPoint = np.array( [ 340, 115 ] )
@@ -83,7 +138,7 @@ class Common:
     radiusLookAhead = 0.5
     
     """ Grayscale image from the terrain """
-    img = cv.imread( "marsYard/materials/textures/heightmap.jpg", cv.IMREAD_GRAYSCALE )
+    img = cv.imread( "test_field_one/materials/textures/heightmap.jpg", cv.IMREAD_GRAYSCALE )
     
     """ Height-Pixel proportion """
     heightProportion = 2.0/255
@@ -109,7 +164,7 @@ class Common:
         Cost map for fast marching gradient computation
     """
 
-    costMap = cv.imread( "marsYard/costMap_for_FM/costMap_1025_12.jpg", cv.IMREAD_GRAYSCALE )
+    costMap = cv.imread( "test_field_one/costMap_for_FM/costMap_1025_12.jpg", cv.IMREAD_GRAYSCALE )
     
     """
         Minimum Distance the robot must be from the goal for the cycle to end
@@ -128,7 +183,7 @@ class Common:
                                     #   4   -> SQP method + jit
     
     """ Enable/Disable Gaussian Processes """
-    gpOnOff = True                                                      #   On (True), Off (False)
+    gpOnOff = True                                                     #   On (True), Off (False)
 
     """
         Local Gaussian Processes (LGP)
@@ -177,25 +232,27 @@ class Common:
 
         #   Type gazebo_msgs/LinkStates.msg, from Gazebo     
         if( poseType == 0 ):
-
             self.truePose = msg
 
         #   Type nav_msgs/Odometry.msg, fused Pose (IMU + Odometry) 
         elif( poseType == 1 ):
-
             self.fusedPose = msg
         
         #   Type pioneer3at_control/pose3D.msg, robot pose expressed on aircraft angles (roll, pitch, yaw)
         elif( poseType == 2 ):
-
             self.robotPose = msg
 
     #   Type geometry_msgs/Twist.msg
-    def _TwistCallback( self, msg ):
+    def _TwistCallback( self, msg, opt ):
 
         #   Actuation ( with velocities )
-        self.actuation = msg
-    
+        if( opt == 0 ):
+            self.actuation = msg
+
+        #   Velocity ( with velocities )
+        if( opt == 1 ):
+            self.velocity = msg
+
     #   Type std_msgs/Int32.msg
     def _Int32Callback( self, msg, opt ):
 
@@ -281,6 +338,18 @@ class Common:
             pose.yaw = rpy[2]
         
         return pose
+    
+    def _selectVelType( self, poseType ):
+
+        vel = Twist()
+
+        if( poseType == 0 ):
+            vel = self.truePose.twist[1]
+        
+        elif( poseType == 1 ):
+            vel = self.fusedPose.twist.twist
+
+        return vel
 
     def _ode( self, x, u, gp = None ):
 
