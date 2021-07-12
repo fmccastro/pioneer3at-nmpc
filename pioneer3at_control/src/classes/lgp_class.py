@@ -7,6 +7,7 @@ import gpflow, sys, math, pprint, time, pickle
 import matplotlib.pyplot as plt
 
 import numpy as np
+from numpy.core.shape_base import vstack
 from numpy.lib.function_base import disp
 import tensorflow as tf
 
@@ -46,16 +47,19 @@ class localModel:
 @dataclass
 class LGP_Record:
 
-    localModelsIndex: List[localModel] = field( default_factory = list )
+    localModelsIndex: List[ localModel ] = field( default_factory = list )
 
     def __repr__( self ):
         localModelsIndex = ', '.join(f'{c!s}' for c in self.localModelsIndex)
         return f'{self.__class__.__name__}({localModelsIndex})'
 
 class LGP:
-    def __init__( self, common ): 
+    def __init__( self, common ):
 
         self.pointsCollected = 0
+
+        #   For function calls
+        self.funCommon = common
 
         self._N = common.N
         self._dt = common.Ts
@@ -65,8 +69,8 @@ class LGP:
         self.nbStates = common.NbStates
         self.nbControls = common.NbControls
 
-        self.inputDim = common.LGP.nbInputs
-        self.outputDim = common.LGP.nbOutputs
+        self.inputDim = common.nbInputs
+        self.outputDim = common.nbOutputs
 
         self.inputFlag = True
         self.outFlag = True
@@ -74,9 +78,9 @@ class LGP:
         self._rawInputData = None
         self._rawOutputData = None
 
-        self.threshold = common.LGP.limitValue
-        self.maxNbDataPoints = common.LGP.maxDataPts
-        self.maxNbLocalModels = common.LGP.maxLocalModels
+        self.threshold = common.limitValue
+        self.maxNbDataPoints = common.maxDataPts
+        self.maxNbLocalModels = common.maxLocalModels
 
         weights = []
         self.kernel = []
@@ -99,7 +103,8 @@ class LGP:
     
     def _getVelocity( self, currentPose, previousPose, timeDifference ):
 
-        return np.array( [ [ math.sqrt( math.pow( currentPose.x - previousPose.x, 2 ) + math.pow( currentPose.y - previousPose.y, 2 ) ) / timeDifference, ( currentPose.yaw - previousPose.yaw ) / timeDifference ] ] )
+        return np.array( [ [ math.sqrt( math.pow( currentPose.x - previousPose.x, 2 ) + math.pow( currentPose.y - previousPose.y, 2 ) )\
+                                                                / timeDifference, ( currentPose.yaw - previousPose.yaw ) / timeDifference ] ] )
 
     def _getControls( self, actuation ):
 
@@ -127,12 +132,15 @@ class LGP:
 
         return self._rawInputData, self._rawOutputData
     
-    def _saveTrainingData( self, rawInput, rawOutput ):
+    def _saveTrainingData( self, filenameInput, filenameOutput ):
+
+        rawInput = np.load( filenameInput )
+        rawOutput = np.load( filenameOutput )
 
         self._rawInputData = rawInput
         self._rawOutputData = rawOutput
     
-    def _loopLocalModels( self, input, index ): # OK
+    def _loopLocalModels( self, input, state ): # OK
 
         """
             inputs:
@@ -145,9 +153,10 @@ class LGP:
 
         wk = []
 
-        for j in range( self.localModelsNb[index] ):
+        for j in range( self.localModelsNb[state] ):
 
-            wk += [ self.kernel[index]( input, self.localGPModels[index].localModelsIndex[j].center ).numpy()[0, 0] ]
+            wk += [ self.funCommon._kernel( self.gpModel[state].kernel.lengthscales.numpy(),\
+                                            self.gpModel[state].likelihood.variance.numpy(), input, self.localGPModels[state].localModelsIndex[j].center ) ]
 
         return wk
 
@@ -163,10 +172,11 @@ class LGP:
 
             if( self.localModelsNb[j] == 0 ):
 
-                k_new_scl = self.kernel[j]( input, input ).numpy()
+                k_new_scl = self.funCommon._kernel( self.gpModel[j].kernel.lengthscales.numpy(),\
+                                                    self.gpModel[j].likelihood.variance.numpy(), input, input )
 
                 #gram = np.array( k_new_scl ) + np.array( [ [ self.kernel[j].kernels[1].variance.numpy() ] ] )
-                gram = np.array( k_new_scl ) + np.array( [ [ self.gpModel[j].likelihood.variance.numpy() ] ] )
+                gram = np.array( [ [ k_new_scl ] ] ) + np.array( [ [ self.gpModel[j].likelihood.variance.numpy() ] ] )
 
                 alpha = np.linalg.inv( gram ) @ output[ 0, j ].reshape( 1, 1 )
 
@@ -186,8 +196,20 @@ class LGP:
 
                 if( nearestLM > self.threshold[j] ):
 
-                    K_new = np.transpose( np.array( self.kernel[j]( input, self.localGPModels[j].localModelsIndex[maxIndex].inputs ).numpy() ) )
+                    _inputs = self.localGPModels[j].localModelsIndex[maxIndex].inputs
 
+                    for i in range( _inputs.shape[0] ):
+
+                        if( i == 0 ):
+                            K_new = np.array( [ [ self.funCommon._kernel( self.gpModel[j].kernel.lengthscales.numpy(),\
+                                                                          self.gpModel[j].likelihood.variance.numpy(),\
+                                                                                input, _inputs[i, :].reshape(1, -1) ) ] ] )
+
+                        elif( i > 0 ):
+                            K_new = np.vstack( ( K_new, self.funCommon._kernel( self.gpModel[j].kernel.lengthscales.numpy(),\
+                                                                                              self.gpModel[j].likelihood.variance.numpy(),\
+                                                                                                    input, _inputs[i, :].reshape(1, -1) ) ) )
+                    
                     self.localGPModels[j].localModelsIndex[maxIndex].inputs = np.vstack( ( self.localGPModels[j].localModelsIndex[maxIndex].inputs, input ) )
 
                     self.localGPModels[j].localModelsIndex[maxIndex].outputs = np.vstack( ( self.localGPModels[j].localModelsIndex[maxIndex].outputs,\
@@ -196,7 +218,8 @@ class LGP:
                     self.localGPModels[j].localModelsIndex[maxIndex].center = np.mean( self.localGPModels[j].localModelsIndex[maxIndex].inputs,\
                                                                                                                 axis = 0 ).reshape( 1, self.inputDim )
 
-                    k_new_scl = self.kernel[j]( input, input ).numpy()
+                    k_new_scl = self.funCommon._kernel( self.gpModel[j].kernel.lengthscales.numpy(),\
+                                                        self.gpModel[j].likelihood.variance.numpy(), input, input )
 
                     #kernel_var = self.kernel[j].kernels[1].variance.numpy()
                     model_var = self.gpModel[j].likelihood.variance.numpy()
@@ -227,10 +250,11 @@ class LGP:
 
                 else:
 
-                    k_new_scl = self.kernel[j]( input, input ).numpy()
+                    k_new_scl = self.funCommon._kernel( self.gpModel[j].kernel.lengthscales.numpy(),\
+                                                        self.gpModel[j].likelihood.variance.numpy(), input, input )
 
                     #gram = np.array( k_new_scl ) + np.array( [ [ self.kernel[j].kernels[1].variance.numpy() ] ] )
-                    gram = np.array( k_new_scl ) + np.array( [ [ self.gpModel[j].likelihood.variance.numpy() ] ] )
+                    gram = np.array( [ [ k_new_scl ] ] ) + np.array( [ [ self.gpModel[j].likelihood.variance.numpy() ] ] )
 
                     alpha = np.linalg.inv( gram ) @ output[ 0, j ].reshape(1, 1)
 
@@ -254,6 +278,8 @@ class LGP:
         for x, y in zip( self._rawInputData, self._rawOutputData ):
             self._partitioning( x.reshape(1, x.shape[0] ), y.reshape(1, y.shape[0] ) )
 
+            print("Index: ", index)
+
             index += 1
 
         self._printLocalModel( 0 )
@@ -261,40 +287,6 @@ class LGP:
         self._printLocalModel( 2 )
 
         self._printSummary()
-
-    def _hyperParametersOpt( self ): # OK
-
-        opt = gpflow.optimizers.Scipy()
-
-        ###
-
-        self.gpModel += [ gpflow.models.GPR( data = ( self._rawInputData, self._rawOutputData[ :, 0 ].reshape( -1, 1 ) ), kernel = self.kernel[0], mean_function = None ) ]
-
-        opt.minimize( self.gpModel[0].training_loss, self.gpModel[0].trainable_variables, tol = 1e-6/100 )
-
-        print_summary( self.gpModel[0] )
-
-        time.sleep(2)
-        
-        ###
-
-        self.gpModel += [ gpflow.models.GPR( data = ( self._rawInputData, self._rawOutputData[ :, 1 ].reshape( -1, 1 ) ), kernel = self.kernel[1], mean_function = None ) ]
-
-        opt.minimize( self.gpModel[1].training_loss, self.gpModel[1].trainable_variables, tol = 1e-6/100 )
-
-        time.sleep(2)
-
-        print_summary( self.gpModel[1] )
-
-        ###
-
-        self.gpModel += [ gpflow.models.GPR( data = ( self._rawInputData, self._rawOutputData[ :, 2 ].reshape( -1, 1 ) ), kernel = self.kernel[2], mean_function = None ) ]
-
-        opt.minimize( self.gpModel[2].training_loss, self.gpModel[2].trainable_variables, tol = 1e-6/100 )
-
-        time.sleep(2)
-        
-        print_summary( self.gpModel[2] )
 
     def _forwardSubs( self, A, B ): # OK
 
@@ -315,9 +307,9 @@ class LGP:
 
             for j in range( i ):
 
-                X[ i ] = X[ i ] - A[ i, j ] * X[ j ]
+                X[i] = X[i] - A[i, j] * X[j]
         
-            X[ i ] = X[ i ] / A[ i, i ]
+            X[i] = X[i] / A[i, i]
 
         X = np.array( X ).reshape( len(X), 1 )
 
@@ -381,7 +373,7 @@ class LGP:
             output:
                     X: N*1 matrix (numpy)
 
-                    cholesky * X = output <=> X = cholesky⁻¹ * output
+                    cholesky * X = output <=> X = cholesky.T * output
         """
 
         Y = self._forwardSubs( cholesky, output )
@@ -389,180 +381,137 @@ class LGP:
         X = self._backSubs( np.transpose( cholesky ), Y )
 
         return X
-    
-    ###   Squared - exponential kernel
-    def _kernelSE( self, state, xp, xq ):
 
-        res = []
-        xp = transpose( xp )
-
-        w = self.gpModel[state].kernel.lengthscales.numpy()
-
-        W = SX.zeros( len(w), len(w) )
-
-        for i in range( len(w) ):
-            W[i, i] = math.pow( w[i], -2 )
-
-        for row in xq:
+    def _nearestModels( self, state, predInput ):
         
-            row = row.reshape( 1, self.inputDim )
+        """
+            Find nearest models for query input
 
-            res += [ self.gpModel[state].kernel.variance.numpy() * exp( -0.5 * mtimes( mtimes( xp - row, W ), transpose( xp - row ) ) ) ]
+            Inputs:
+                    state -> output state to look for nearest models
+                    predInput -> query data point
+
+            Output:
+                    result -> ordered list with distance from the local model center to the query by ascending order                        
+        """
         
-        result = transpose( vertcat(*res) )
-
-        return result
-
-    def _nearestModels( self, state, test ):
-
-        dist = np.zeros( ( 1, 2 ) )
-        aux = np.zeros( ( 1, 2 ) )
+        predInput = np.array( predInput ).reshape(1, -1)
 
         for i in range( self.localModelsNb[state] ):
 
             if( i == 0 ):
-                dist[ 0, 0 ] = self._kernelSE( state, test, self.localGPModels[state].localModelsIndex[i].center )
-                dist[ 0, 1 ] = i
+                full = np.array( [ [ self.funCommon._kernel( self.gpModel[state].kernel.lengthscales.numpy(),\
+                                                             self.gpModel[state].likelihood.variance.numpy(),\
+                                                                predInput, self.localGPModels[state].localModelsIndex[i].center ), i ] ] )
 
             elif( i == 1 ):
-                aux[ 0, 0 ] = self._kernelSE( state, test, self.localGPModels[state].localModelsIndex[i].center )
-                aux[ 0, 1 ] = i
+                full = np.vstack( ( full, np.array( [ [ self.funCommon._kernel( self.gpModel[state].kernel.lengthscales.numpy(),\
+                                                                                self.gpModel[state].likelihood.variance.numpy(),\
+                                                                                    predInput, self.localGPModels[state].localModelsIndex[i].center ), i ] ] ) ) )
 
-                full = np.vstack( ( dist, aux ) )
-            
-            elif( i >= 2 ):
-                aux[ 0, 0 ] = self._kernelSE( state, test, self.localGPModels[state].localModelsIndex[i].center )
-                aux[ 0, 1 ] = i
-
-                full = np.vstack( ( full, aux ) )
-
+        #   Higher values mean a smaller distance from the prediction input to the respective local model center
         full = full[ ( -full[ :, 0 ] ).argsort() ]
 
-        full = full[ :self.maxNbLocalModels, 1 ]
+        full = full[ :self.maxNbLocalModels, : ]
 
-        result = full.tolist()
+        return full
 
-        return result
+    def _prediction( self, state, test ):
 
-    def _prediction( self, state, test, indexList ):
+        """
+            Make prediction for a given "state" with query point "test"
+        """
 
-        wk = []
-        yk = []
+        models = self._nearestModels( state, test )
 
-        for i in range( self.maxNbLocalModels ):
-            wk += [ self._kernelSE( state, test, self.localGPModels[state].localModelsIndex[ indexList[i] ].center ) ]
-            yk += [ mtimes( self._kernelSE( state, test, self.localGPModels[state].localModelsIndex[ indexList[i] ].inputs ),\
-                                                            self.localGPModels[state].localModelsIndex[ indexList[i] ].predictionVector ) ]
-
-        wk = vertcat( *wk )
-        yk = vertcat( *yk )
-
-        sum_wk = 0
-
-        for i in range( wk.shape[0] ):
-            sum_wk = sum_wk + wk[ i, 0 ]
-
-        y = dot( wk, yk ) / sum_wk
-
-        print( y.shape )
-        
-        return y
-    
-    def _fullPrediction( self, test, listLocalModels ):
-
-        output = []
-
-        for i in range( self.outputDim ):
-            output += [ self._prediction( i, test, listLocalModels ) ]
-
-        return vertcat( *output )
-    
-    def _guessPredictionVar( self, optNb, prevSolution = None, transMethod = None, preVelocity = None, velocity = None ):
-        res = []
-
-        if( optNb == 0 ):
-            for _ in range( self._N ):
-                for j in range( self.outputDim ):
-                    res = self._nearestModels( j, [ 0 ] * self.inputDim ).reshape( 1, -1 )
-                    res += res
-        
-        else:
-            #   Direct Multiple Shooting
-            if( transMethod == 0 ):
-                data = prevSolution['x'].elements()
-                preControl = []
-                control = []
-                preVel = []
-
-                for i in range( self._N ):
-                    preControl = data[ i * ( self.nbStates + self.nbControls ) : i * ( self.nbStates + self.nbControls ) + self.nbControls ]
-                    
-                    if( i == self._N - 1 ):
-                        control = data[ i * ( self.nbStates + self.nbControls ) : i * ( self.nbStates + self.nbControls ) + self.nbControls ]
-                        nextPose = data[ ( i - 1 ) * ( self.nbStates + self.nbControls ) + self.nbControls : ( i - 1 ) * ( self.nbStates + self.nbControls ) + ( self.nbStates + self.nbControls ) ]
-                        prevPose = data[ ( i - 2 ) * ( self.nbStates + self.nbControls ) + self.nbControls : ( i - 2 ) * ( self.nbStates + self.nbControls ) + ( self.nbStates + self.nbControls ) ]
-                        v_x = math.sqrt( math.pow( ( nextPose[0] - prevPose[0] ), 2 ) + math.pow( ( nextPose[1] - prevPose[1] ), 2 ) ) / self._dt
-                        w_z = self.__shortestAngle( prevPose[2], nextPose[2] ) / self._dt
-                        preVel = [ v_x, w_z ]
-
-                    elif( i == 0 ):
-                        control = data[ ( i + 1 ) * ( self.nbStates + self.nbControls ) : ( i + 1 ) * ( self.nbStates + self.nbControls ) + self.nbControls ]
-                        preVel = [ preVelocity.linear.x, preVelocity.angular.z ]
-                    
-                    elif( i == 1 ):
-                        control = data[ ( i + 1 ) * ( self.nbStates + self.nbControls ) : ( i + 1 ) * ( self.nbStates + self.nbControls ) + self.nbControls ]
-                        preVel = [ velocity.linear.x, velocity.angular.z ]
-                    
-                    else:
-                        control = data[ ( i + 1 ) * ( self.nbStates + self.nbControls ) : ( i + 1 ) * ( self.nbStates + self.nbControls ) + self.nbControls ]
-                        nextPose = data[ ( i - 1 ) * ( self.nbStates + self.nbControls ) + self.nbControls : ( i - 1 ) * ( self.nbStates + self.nbControls ) + ( self.nbStates + self.nbControls ) ]
-                        prevPose = data[ ( i - 2 ) * ( self.nbStates + self.nbControls ) + self.nbControls : ( i - 2 ) * ( self.nbStates + self.nbControls ) + ( self.nbStates + self.nbControls ) ]
-                        v_x = math.sqrt( math.pow( ( nextPose[0] - prevPose[0] ), 2 ) + math.pow( ( nextPose[1] - prevPose[1] ), 2 ) ) / self._dt
-                        w_z = self.__shortestAngle( prevPose[2], nextPose[2] ) / self._dt
-                        preVel = [ v_x, w_z ]
-
-                    for j in range( self.outputDim ):
-                        res += self._nearestModels( j, preVel + preControl + control ).reshape( 1, -1 )
+        for i in range( models.shape[0] ):
             
-            #   Direct Single Shooting
-            elif( transMethod == 1 ):
-                data_x = prevSolution['x'].elements()
-                data_g = prevSolution['g'].elements()
-                preControl = []
-                control = []
-                preVel = []
+            _inputs = self.localGPModels[state].localModelsIndex[ models[i, 1] ].inputs
 
-                for i in range( self._N ):
-                    preControl = data_x[ i * self.nbControls : i * self.nbControls + self.nbControls ]
+            for j in range( _inputs.shape[0] ):
+
+                if( j == 0 ):
+                    k = np.array( self.funCommon._kernel( self.gpModel[state].kernel.lengthscales.numpy(),\
+                                                          self.gpModel[state].likelihood.variance.numpy(),\
+                                                                test, _inputs[j, :].reshape(1, -1) ) ).reshape(1, -1)
+
+                elif( j > 0 ):
+                    k = np.hstack( ( k, np.array( self.funCommon._kernel( self.gpModel[state].kernel.lengthscales.numpy(),\
+                                                                          self.gpModel[state].likelihood.variance.numpy(),\
+                                                                                test, _inputs[j, :].reshape(1, -1) ) ).reshape(1, -1) ) )
+
+            if( i == 0 ):
+                y = k @ self.localGPModels[state].localModelsIndex[ models[i, 1] ].predictionVector.reshape(-1, 1)
+                w = models[i, 0]
+            
+            elif( i > 0 ):
+                y = np.vstack( ( y, k @ self.localGPModels[state].localModelsIndex[ models[i, 1] ].predictionVector.reshape(-1, 1) ) )
+                w = np.hstack( ( w, models[i, 0] ) )
+        
+        output = np.dot( w, y ) / np.sum(w)
+
+        return output
+    
+    def _fullPrediction( self, predInputs ):
+
+        for j in range( predInputs.shape[0] ):
+
+            for i in range( self.outputDim ):
+
+                if( i == 0 ):
+                    output = np.array( [ [ self._prediction( i, predInputs[j, :].reshape(1, -1) ) ] ] )
+                
+                elif( i > 0 ):
+                    output = np.hstack( ( output, self._prediction( i, predInputs[j, :].reshape(1, -1) ) ) )
+
+            if( j == 0 ):
+                fullOutput = output
+    
+            elif( j > 0 ):
+                fullOutput = np.vstack( ( fullOutput, output ) )
+
+        return fullOutput
+
+    def _getPredictionInputs( self, iniPose, seqPose, seqControl, gpModel ):
+
+        """
+            Obtain prediction inputs for the selected prediction model, with respect to the solution from the previous NMPC optimization
+        """
+        
+        #   { u_k, u_{k-1}, v_{k-1} }
+        if( gpModel == 1 ):
+
+            index = 0
+
+            for i, j in zip( range( 0, len( seqControl ), self.nbControls ), range( 0, len( seqPose ), self.nbStates ) ):
+
+                if( i == 0 and j == 0 ):
                     
-                    if( i == self._N - 1 ):
-                        control = data_x[ i * self.nbControls : i * self.nbControls + self.nbControls ]
-                        nextPose = data_g[ ( i - 1 ) * self.nbStates : ( i - 1 ) * self.nbStates + self.nbStates ]
-                        prevPose = data_g[ ( i - 2 ) * self.nbStates : ( i - 2 ) * self.nbStates + self.nbStates ]
-                        v_x = math.sqrt( math.pow( ( nextPose[0] - prevPose[0] ), 2 ) + math.pow( ( nextPose[1] - prevPose[1] ), 2 ) ) / self._dt
-                        w_z = self.__shortestAngle( prevPose[2], nextPose[2] ) / self._dt
-                        preVel = [ v_x, w_z ]
+                    vel_x = self.funCommon._distanceBtwPoints( [ seqPose[j], seqPose[j + 1] ], iniPose, 3 ) / self._dt
+                    w_z = self.funCommon._shortestAngle( iniPose.yaw, seqPose[j + 2] ) / self._dt
 
-                    elif( i == 0 ):
-                        control = data_x[ ( i + 1 ) * self.nbControls : ( i + 1 ) * self.nbControls + self.nbControls ]
-                        preVel = [ preVelocity.linear.x, preVelocity.angular.z ]
+                    inputs = np.array( [ [ seqControl[ i + self.nbControls ], seqControl[ i + self.nbControls + 1 ], seqControl[ i ], seqControl[ i + 1 ], vel_x, w_z ] ] )
+
+                elif( i > 0 and j > 0 and i < len(seqControl) - self.nbControls and j < len(seqPose) - self.nbStates ):
                     
-                    elif( i == 1 ):
-                        control = data_x[ ( i + 1 ) * self.nbControls : ( i + 1 ) * self.nbControls + self.nbControls ]
-                        preVel = [ velocity.linear.x, velocity.angular.z ]
+                    vel_x = self.funCommon._distanceBtwPoints( [ seqPose[j], seqPose[j + 1] ],\
+                                [ seqPose[j - self.nbStates ], seqPose[j - self.nbStates  + 1] ], 2 ) / self._dt
+                    w_z = self.funCommon._shortestAngle( seqPose[j - self.nbStates + 2], seqPose[ j + 2 ] ) / self._dt
+
+                    inputs = np.vstack( ( inputs,\
+                                np.array( [ [ seqControl[ i + self.nbControls ], seqControl[ i + self.nbControls + 1 ], seqControl[ i ], seqControl[ i + 1 ], vel_x, w_z ] ] ) ) )
                     
-                    else:
-                        control = data_x[ ( i + 1 ) * self.nbControls : ( i + 1 ) * self.nbControls + self.nbControls ]
-                        nextPose = data_g[ ( i - 1 ) * self.nbStates : ( i - 1 ) * self.nbStates + self.nbStates ]
-                        prevPose = data_g[ ( i - 2 ) * self.nbStates : ( i - 2 ) * self.nbStates + self.nbStates ]
-                        v_x = math.sqrt( math.pow( ( nextPose[0] - prevPose[0] ), 2 ) + math.pow( ( nextPose[1] - prevPose[1] ), 2 ) ) / self._dt
-                        w_z = self.__shortestAngle( prevPose[2], nextPose[2] ) / self._dt
-                        preVel = [ v_x, w_z ]
+                elif( i == len(seqControl) - self.nbControls and j == len(seqPose) - self.nbStates ):
+                    
+                    vel_x = self.funCommon._distanceBtwPoints( [ seqPose[j], seqPose[j + 1] ],\
+                                    [ seqPose[j - self.nbStates ], seqPose[j - self.nbStates  + 1] ], 2 ) / self._dt
+                    w_z = self.funCommon._shortestAngle( seqPose[j - self.nbStates + 2], seqPose[ j + 2 ] ) / self._dt
 
-                    for j in range( self.outputDim ):
-                        res += self._nearestModels( j, preVel + preControl + control ).reshape( 1, -1 )
+                    inputs = np.vstack( ( inputs, np.array( [ [ seqControl[ i ], seqControl[ i + 1 ], seqControl[ i ], seqControl[ i + 1 ], vel_x, w_z ] ] ) ) )
 
-        return res
+                index += 1
+
+        return inputs
 
     def _rankOneUpdate( self, L, x ):
 
@@ -623,6 +572,7 @@ class LGP:
         print("\n")
 
     def _loadModel( self ):
+
         """
             Return local models and number of local models for each state
         """
@@ -630,6 +580,7 @@ class LGP:
         return self.localModelsNb, self.localGPModels
     
     def _loadParameters( self ):
+
         """
             Load parameters of each model
         """
@@ -663,12 +614,6 @@ class LGP:
                                                                 kernel = self.kernel[index], mean_function = None, noise_variance = element[2] ) ]
 
             #print_summary( self.kernel[index] )
-            #print_summary( self.gpModel[index] )
+            print_summary( self.gpModel[index] )
 
             index += 1
-        
-        output2 = pickle.load( pickle_in )
-        output3 = pickle.load( pickle_in )
-
-        self.localModelsNb = output2
-        self.localGPModels = output3

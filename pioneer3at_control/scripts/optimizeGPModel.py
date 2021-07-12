@@ -8,32 +8,64 @@ import numpy as np
 from sys import path
 path.append(r"/home/fmccastro/Tese_RoverNavigation/ROS_workspaces/wsPy3/src/pioneer3at_control/src")
 
-from classes import Common, Model, LGP, localModel, LGP_Record
+from classes import Common, OPT
 
-from gpflow.utilities import print_summary
+if __name__ == '__main__':
+    
+    common = Common()
 
-common = Common()
+    opt = OPT( common )
 
-gp = LGP( inputDimension = common.LGP.nbInputs, outputDimension = common.LGP.nbOutputs, limitValue = common.LGP.limitValue, maxNbDataPts = common.LGP.maxDataPts,\
-                        maxNbLocalModels = common.LGP.maxLocalModels )
+    input = np.load(common.pathInputTrainingData_np)
+    output = np.load(common.pathOutputTrainingData_np)
 
-input = np.load(common.LGP.pathInputTrainingData_np)
-output = np.load(common.LGP.pathOutputTrainingData_np)
+    mse = {}
 
-gp._saveTrainingData( input, output )
-gp._hyperParametersOpt()
-gp._buildInitialLocalModels()
+    div = int( (common.nbTrainingPoints / common.trainingSet) )
+    print( div )
 
-parametersGP = gp._loadParameters()
-localModelsNb, localGPModels = gp._loadModel()
+    for k in range( common.trainingSet ):
+        print(k)
+        valInput = input[ div * k : div * ( k + 1 ), : ]
+        valOutput = output[ div * k : div * ( k + 1 ), : ]
 
-###
-os.remove(common.LGP.pathModel)
+        trainInput = np.delete( input, slice( div * k, div * ( k + 1 ) ), 0 )
+        trainOutput = np.delete( output, slice( div * k, div * ( k + 1 ) ), 0 )
 
-f = open(common.LGP.pathModel, "wb")
+        opt._saveTrainingData( trainInput, trainOutput )
+        opt._hyperParametersOpt()
 
-pickle.dump( parametersGP, f )
-pickle.dump( localModelsNb, f )
-pickle.dump( localGPModels, f )
+        valError = opt._valMSE( valInput, valOutput )
+        trainError = opt._trainMSE( trainInput, trainOutput )
 
-f.close()
+        for state in range( common.nbOutputs ):
+
+            print(state, valError[state], trainError[state] )
+
+            parametersGP = opt._loadParameters( state )
+
+            if( k == 0 ):
+                mse[ str(state) ] = np.array( [ [ valError[state], trainError[state], parametersGP ] ] )
+
+            else:
+                mse[ str(state) ] = np.vstack( ( mse[ str(state) ], np.array( [ [ valError[state], trainError[state], parametersGP ] ] ) ) )
+
+    for state in range( common.nbOutputs ):
+        mse[ str(state) ] = mse[ str(state) ][ ( mse[ str(state) ][ :, 0 ] ).argsort() ]
+
+    print( "1", mse['0'] )
+    print( "2", mse['1'] )
+    print( "3", mse['2'] )
+
+    parametersGP = []
+
+    for state in range( common.nbOutputs ):
+        parametersGP += [ mse[ str(state) ][0, 2] ]
+
+    os.remove(common.pathModel)
+
+    f = open(common.pathModel, "wb")
+
+    pickle.dump( parametersGP, f )
+
+    f.close()

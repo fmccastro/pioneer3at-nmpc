@@ -17,74 +17,6 @@ from std_msgs.msg import Int32, Float64, Float64MultiArray
 
 os.chdir("/home/fmccastro/Tese_RoverNavigation/ROS_workspaces/wsPy3/src/pioneer3at_gazebo/models")
 
-class LGP_Common:
-
-    select = True
-    nbTrainingPoints = 1000
-    gpModel = 1
-    nbInputs = 6                                                            #   Number of prediction variables
-    nbOutputs = 3                                                           #   Number of prediction states
-    maxLocalModels = 3                                                      #   For selection of closer models
-    maxDataPts = 250                                                        #   Maximum Data Points per Local Model
-    limitValue = [ 0.002, 0.0001, 0.33 ]
-    pred_limitValue = [ 0.5, 0.5, 0.7 ]
-
-    """
-        Define (non-fixed) prediction variables here
-    """
-    
-    if( gpModel == 1 ):
-
-        """
-            Additional initial parameters
-        """
-
-        ###   For function definition
-        preCtrl_ini_def = ca.SX.sym( 'preCtrl_ini_def', 2 )
-        preVel_ini_def = ca.SX.sym( 'preVel_ini_def', 2 )
-        nowVel_ini_def = ca.SX.sym( 'nowVel_ini_def', 2 )
-
-        paramGP_def = ca.vertcat( preCtrl_ini_def, preVel_ini_def, nowVel_ini_def )
-
-        ####################
-
-        preCtrl_ini = ca.SX.sym( 'preCtrl_ini', 2 )
-        preVel_ini = ca.SX.sym( 'preVel_ini', 2 )
-        nowVel_ini = ca.SX.sym( 'nowVel_ini', 2 )
-
-        paramGP = ca.vertcat( preCtrl_ini, preVel_ini, nowVel_ini )
-        ######
-
-        """
-            Prediction variables
-        """
-        
-        ### For function definition
-        preVel_def = ca.SX.sym( 'preVel_def', 2 )
-        preCtrl_def = ca.SX.sym( 'preCtrl_def', 2 )
-        nowCtrl_def = ca.SX.sym( 'nowCtrl_def', 2 )
-
-        predGP_def = ca.vertcat( preVel_def, preCtrl_def, nowCtrl_def)
-            
-        ####################
-
-        preVel = ca.SX.sym( 'preVel', 2 )
-        preCtrl = ca.SX.sym( 'preCtrl', 2 )
-        nowCtrl = ca.SX.sym( 'nowCtrl', 2 )
-
-        predGP = ca.vertcat( preVel, preCtrl, nowCtrl )
-        ######
-
-    ############################################################################################################
-
-    pathInputTrainingData_np = "/home/fmccastro/Tese_RoverNavigation/ROS_workspaces/wsPy3/src/pioneer3at_viz/trainingData/trainingField1/gp_model_" + str(gpModel) + "/" + str(nbTrainingPoints) + "_training_points/input.npy"
-    pathOutputTrainingData_np = "/home/fmccastro/Tese_RoverNavigation/ROS_workspaces/wsPy3/src/pioneer3at_viz/trainingData/trainingField1/gp_model_" + str(gpModel) + "/" + str(nbTrainingPoints) + "_training_points/output.npy"
-
-    pathInputTrainingData_mat = "/home/fmccastro/Tese_RoverNavigation/ROS_workspaces/wsPy3/src/pioneer3at_viz/trainingData/trainingField1/gp_model_" + str(gpModel) + "/" + str(nbTrainingPoints) + "_training_points/input.mat"
-    pathOutputTrainingData_mat = "/home/fmccastro/Tese_RoverNavigation/ROS_workspaces/wsPy3/src/pioneer3at_viz/trainingData/trainingField1/gp_model_" + str(gpModel) + "/" + str(nbTrainingPoints) + "_training_points/output.mat"
-
-    pathModel = "/home/fmccastro/Tese_RoverNavigation/ROS_workspaces/wsPy3/src/pioneer3at_viz/trainingData/trainingField1/gp_model_" + str(gpModel) + "/" + str(nbTrainingPoints) + "_training_points/gp.pickle"
-
 class Common:
 
     """ Nodes Initialization """
@@ -95,7 +27,7 @@ class Common:
     dataProc = -2                                                       #   Node [dataProc] initialization order
 
     """ System Parameters """
-    Ts = 0.1                                                            #   Sampling Time
+    Ts = 0.15                                                           #   Sampling Time
     fixedTs = True                                                      #   Variable sampling time
     N = 20                                                              #   Control Intervals
     maxCycles = 10                                                      #   Maximum number of cycles for look ahead point finder
@@ -117,23 +49,21 @@ class Common:
     R = ca.diag( ca.SX( [ 0.1, 0.1 ] ) )                                #   Controls Matrix
 
     """ Goal Point on [Px] units """
-    goalPoint = np.array( [ 340, 115 ] )
+    goalPoint = np.array( [ 8.13840156, -13.791423 ] )
 
-    """ Reference Path Points on [Px] units """
-    path = [
-                [ 194, 80 ],
-                [ 124, 106.667 ],
-                [ 124.5, 180.0 ],
-                [ 125, 250.667 ],
-                [ 190, 360.533 ],
-                [ 222, 343.467 ],
-                [ 247, 283.733 ],
-                [ 298, 299 ],
-                [ 341, 362 ],
-                [ 400, 265 ],
-                [ 401, 186 ],
-                [ 340, 115 ]
-                                    ]
+    """ Reference Path Points on [m] units """
+    path = [    [ -6.09161793, -17.20272904],
+                [-12.91423002, -14.60360624],
+                [-12.86549708,  -7.45614035],
+                [-12.81676413,  -0.56851852],
+                [ -6.48148148,  10.13966862],
+                [ -3.3625731 ,   8.47631579],
+                [ -0.92592593,   2.6542885 ],
+                [  4.04483431,   4.14230019],
+                [  8.23586745,  10.28265107],
+                [ 13.98635478,   0.82846004],
+                [ 14.08382066,  -6.87134503],
+                [  8.13840156, -13.791423  ]    ]
     
     radiusLookAhead = 0.5
     
@@ -144,8 +74,8 @@ class Common:
     heightProportion = 2.0/255
     
     """ Parameter parameterization factor for path tracking """
-    parameterSpeed = 0.7 * Ts                                  #   For path tracking
-    parameterSpeed_FM = 0.7 * Ts                               #   For fast marching
+    parameterSpeed = 0.7 * Ts                                   #   For path tracking
+    parameterSpeed_FM = 0.7 * Ts                                #   For fast marching
 
     """
         Reference Pose: 0 -> true pose (from Gazebo) 
@@ -158,12 +88,11 @@ class Common:
                                  1 -> trajectory
                                  2 -> fast marching path
     """
-    refType = 2
+    refType = 1
 
     """
         Cost map for fast marching gradient computation
     """
-
     costMap = cv.imread( "test_field_one/costMap_for_FM/costMap_1025_12.jpg", cv.IMREAD_GRAYSCALE )
     
     """
@@ -183,12 +112,46 @@ class Common:
                                     #   4   -> SQP method + jit
     
     """ Enable/Disable Gaussian Processes """
-    gpOnOff = True                                                     #   On (True), Off (False)
+    gpOnOff = True                                                      #   On (True), Off (False)
 
-    """
-        Local Gaussian Processes (LGP)
-    """
-    LGP = LGP_Common()
+    """ Hyper-parameters optimization """
+    hyperOpt = 0                                                        #   0   ->  NLL
+                                                                        #   1   ->  MSE
+
+    """ Gaussian Process Model  """
+    gpType = 0                                                          #   0   ->  LGP
+                                                                        #   1   ->  SOGP
+
+    #   LGP
+    if( gpType == 0 ):
+        limitValue = [ 0.002, 0.0001, 0.33 ]
+        maxDataPts = 250
+        maxLocalModels = 3 
+
+    #   SOGP
+    elif( gpType == 1 ):
+        v = 0.1
+        R_max = 20
+        maxSize = 10
+
+    """ Prediction variables set """
+    gpModel = 1                                                         #   1   ->  u_{k}, u_{k-1}, v_{k-1}
+
+    """ Number of training points """
+    nbTrainingPoints = 1000
+    trainingSet = 10                                                    #   Set of training points to be taken into account
+
+    """ Prediction variables input dimension """
+    nbInputs = 6
+    nbOutputs = 3
+
+    pathInputTrainingData_np = "/home/fmccastro/Tese_RoverNavigation/ROS_workspaces/wsPy3/src/pioneer3at_viz/trainingData/trainingField1/gp_model_" + str(gpModel) + "/" + str(nbTrainingPoints) + "_training_points/input.npy"
+    pathOutputTrainingData_np = "/home/fmccastro/Tese_RoverNavigation/ROS_workspaces/wsPy3/src/pioneer3at_viz/trainingData/trainingField1/gp_model_" + str(gpModel) + "/" + str(nbTrainingPoints) + "_training_points/output.npy"
+
+    pathInputTrainingData_mat = "/home/fmccastro/Tese_RoverNavigation/ROS_workspaces/wsPy3/src/pioneer3at_viz/trainingData/trainingField1/gp_model_" + str(gpModel) + "/" + str(nbTrainingPoints) + "_training_points/input.mat"
+    pathOutputTrainingData_mat = "/home/fmccastro/Tese_RoverNavigation/ROS_workspaces/wsPy3/src/pioneer3at_viz/trainingData/trainingField1/gp_model_" + str(gpModel) + "/" + str(nbTrainingPoints) + "_training_points/output.mat"
+
+    pathModel = "/home/fmccastro/Tese_RoverNavigation/ROS_workspaces/wsPy3/src/pioneer3at_viz/trainingData/trainingField1/gp_model_" + str(gpModel) + "/" + str(nbTrainingPoints) + "_training_points/gp.pickle"
 
     """
         Terramechanics parameters
@@ -407,8 +370,14 @@ class Common:
         if( opt == 0 ):
             return math.sqrt( ( point1.x - point2[0] )**2 + ( point1.y - point2[1] )**2 )
         
-        if( opt == 1 ):
+        elif( opt == 1 ):
             return math.sqrt( ( point1.x - point2.x )**2 + ( point1.y - point2.y )**2 )
+
+        elif( opt == 2 ):
+            return math.sqrt( math.pow( point1[0] - point2[0], 2 ) + math.pow( point1[1] - point2[1], 2 ) )
+        
+        elif( opt == 3 ):
+            return math.sqrt( math.pow( point1[0] - point2.x, 2 ) + math.pow( point1[1] - point2.y, 2 ) )
 
     def _shortestAngle( self, angle1, angle2 ):
 
@@ -433,3 +402,17 @@ class Common:
             diff = diff + 2 * math.pi
 
         return diff
+
+    def _kernel( self, lengthscales, variance, xp, xq ):
+
+        ###   Squared - exponential kernel
+        w = lengthscales
+
+        W = np.zeros( ( len(w), len(w) ) )
+
+        for i in range( len(w) ):
+            W[i, i] = math.pow( w[i], -2 )
+
+        resw = variance * math.exp( -0.5 * ( ( xp - xq ) @ W ) @ ( xp - xq ).T )
+
+        return resw

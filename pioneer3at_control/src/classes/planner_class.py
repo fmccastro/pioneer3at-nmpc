@@ -15,33 +15,34 @@ from scipy import interpolate
 os.chdir("/home/fmccastro/Tese_RoverNavigation/ROS_workspaces/wsPy3/src/pioneer3at_gazebo/models")
 
 class Planner:
-    def __init__( self, Path, NbStates, NbControls, Image, costMap, heightPx, paramVel, paramVelFM, length, option, samplingTime, goal ):
-    
+    def __init__( self, common ):
+
         """
             option: 0 -> Path
                     1 -> Trajectory
                     2 -> Fast Marching points
         """
 
-        self.path = Path
+        self.path = common.path
 
-        self.Nx = NbStates
-        self.Nu = NbControls
+        self.Nx = common.NbStates
+        self.Nu = common.NbControls
 
-        self.img = cv.flip( Image, 0 ) * heightPx
-        self.X, self.Y = np.meshgrid( np.linspace( -length/2, length/2, Image.shape[0] ), np.linspace( -length/2, length/2, Image.shape[1] ) )
+        self.img = cv.flip( common.img, 0 ) * common.heightProportion
+        self.X, self.Y = np.meshgrid( np.linspace( -common.mapLength/2, common.mapLength/2, common.img.shape[0] ), np.linspace( -common.mapLength/2, common.mapLength/2, common.img.shape[1] ) )
         
-        self.heightProportion = heightPx
-        self.parameterVel = paramVel
-        self.parameterVel_FM = paramVelFM
-        self.option = option
-        self.squareDim = length
-        self.Ts = samplingTime
-        self.goal = goal
+        self.heightProportion = common.heightProportion
+        self.parameterVel = common.parameterSpeed
+        self.parameterVel_FM = common.parameterSpeed_FM
+        self.option = common.refType
+        self.squareDim = common.mapLength
+        self.Ts = common.Ts
+        self.goal = common.goalPoint
 
         if( self.option == 2 ):
-            self.img_costMap = cv.flip( costMap, 0 ) * heightPx
-            self.X_costMap, self.Y_costMap = np.meshgrid( np.linspace( -length/2, length/2, costMap.shape[0] ), np.linspace( -length/2, length/2, costMap.shape[1] ) )
+            self.img_costMap = cv.flip( common.costMap, 0 ) * common.heightProportion
+            self.X_costMap, self.Y_costMap = np.meshgrid( np.linspace( -common.mapLength/2, common.mapLength/2, common.costMap.shape[0] ),\
+                                                np.linspace( -common.mapLength/2, common.mapLength/2, common.costMap.shape[1] ) )
 
             self.phi = ( self.X_costMap - self.goal[0] )**2 + ( self.Y_costMap - self.goal[1] )**2 - 0.01
             self.speed = self.img_costMap
@@ -143,11 +144,11 @@ class Planner:
         return headings
 
     def _pathSlicing( self ):
-
-        self.path = np.array( self.path ) * ( self.squareDim / self.img.shape[0] ) - self.squareDim/2
+        self.path = np.array( self.path )
 
         self.path = self.path.tolist()
 
+        #   Trajectory tracking
         if( self.option == 1 ):
 
             traj = trajectory.HermiteTrajectory( milestones = self.path )
@@ -182,6 +183,7 @@ class Planner:
 
             return pathPoints, traj_timed
 
+        #   Path planning
         elif( self.option == 0 ):
 
             path = np.array( self.path )
