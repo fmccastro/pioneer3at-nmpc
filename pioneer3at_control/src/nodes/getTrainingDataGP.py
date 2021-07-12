@@ -18,7 +18,7 @@ from std_msgs.msg import Int32, Float64, Float64MultiArray
 from gazebo_msgs.msg import LinkStates
 from nav_msgs.msg import Path
 from geometry_msgs.msg import Twist, PoseStamped, Point
-from classes import Common, Model, LGP, localModel, LGP_Record
+from classes import Common, Model, LGP, SOGP, localModel, LGP_Record
 
 from pioneer3at_control.msg import pose3D
 from pioneer3at_control.srv import getPath
@@ -37,12 +37,15 @@ if __name__ == '__main__':
 
     common = Common()
 
-    model = Model( Nx = common.NbStates, Nu = common.NbControls,\
-                    ode = common._ode, J = common._costFunction, controlIntervals = common.N,\
-                        weightMatrix_1 = common.Q, weightMatrix_2 = common.R, samplingTime = common.Ts, intAcc = common.intAccuracy, spaceSetLowerBounds = common.X_lb, spaceSetUpperBounds = common.X_ub,\
-                             controLowerBounds = common.U_lb, controlUpperBounds = common.U_ub, transMethod = common.transMet, optimization = common.optType, gpOnOff = common.gpOnOff )
+    #   LGP
+    if( common.gpType == 0 ):
+        gp = LGP( common )
 
-    gp = LGP( inputDimension = common.LGP.nbInputs, outputDimension = common.LGP.nbOutputs, limitValue = common.LGP.limitValue, maxNbDataPts = common.LGP.maxDataPts )
+    #   SOGP
+    elif( common.gpType == 1 ):
+        gp = SOGP( common )
+
+    model = Model( common, gp )
 
     rospy.init_node( 'getTrainingDataGP', anonymous = True )
 
@@ -120,32 +123,32 @@ if __name__ == '__main__':
     input, output = gp._trainingData()
 
     ###
-    os.remove(common.LGP.pathInputTrainingData_np)
-    os.remove(common.LGP.pathOutputTrainingData_np) 
+    os.remove(common.pathInputTrainingData_np)
+    os.remove(common.pathOutputTrainingData_np) 
 
     # Creates a new file
-    with open(common.LGP.pathInputTrainingData_np, 'w') as input_np:
+    with open(common.pathInputTrainingData_np, 'w') as input_np:
         pass
 
-    with open(common.LGP.pathOutputTrainingData_np, 'w') as output_np:
+    with open(common.pathOutputTrainingData_np, 'w') as output_np:
         pass
 
-    np.save(common.LGP.pathInputTrainingData_np, input)
-    np.save(common.LGP.pathOutputTrainingData_np, output)
+    np.save(common.pathInputTrainingData_np, input)
+    np.save(common.pathOutputTrainingData_np, output)
 
     ###
-    os.remove(common.LGP.pathInputTrainingData_mat)
-    os.remove(common.LGP.pathOutputTrainingData_mat)
+    os.remove(common.pathInputTrainingData_mat)
+    os.remove(common.pathOutputTrainingData_mat)
 
     # Creates a new file
-    with open(common.LGP.pathInputTrainingData_mat, 'w') as input_mat:
+    with open(common.pathInputTrainingData_mat, 'w') as input_mat:
         pass
 
-    with open(common.LGP.pathOutputTrainingData_mat, 'w') as output_mat:
+    with open(common.pathOutputTrainingData_mat, 'w') as output_mat:
         pass
 
     matInput = {"input": input, "label": "experiment"}
     matOutput = {"output": output, "label": "experiment"}
 
-    savemat(common.LGP.pathInputTrainingData_mat, matInput)
-    savemat(common.LGP.pathOutputTrainingData_mat, matOutput)
+    savemat(common.pathInputTrainingData_mat, matInput)
+    savemat(common.pathOutputTrainingData_mat, matOutput)

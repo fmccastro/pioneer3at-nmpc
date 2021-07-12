@@ -21,12 +21,8 @@ from pioneer3at_control.srv import getPath, getPathResponse
 if __name__ == '__main__':
 
     common = Common()
-
-    goalPoint = common.goalPoint * ( common.mapLength / common.img.shape[0] ) - common.mapLength/2
     
-    pathPlanning = Planner( Path = common.path, NbStates = common.NbStates, NbControls = common.NbControls, Image = common.img, costMap = common.costMap, heightPx = common.heightProportion,\
-                                paramVel = common.parameterSpeed, paramVelFM = common.parameterSpeed_FM, length = common.mapLength, option = common.refType,\
-                                    samplingTime = common.Ts, goal = goalPoint )
+    pathPlanning = Planner( common )
 
     rospy.init_node( 'markers', anonymous = True )
     
