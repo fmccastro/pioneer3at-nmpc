@@ -63,7 +63,7 @@ if __name__ == '__main__':
 
     index = 0
 
-    while( not rospy.is_shutdown() and index < common.LGP.nbTrainingPoints + 2 ):
+    while( not rospy.is_shutdown() and index < common.nbTrainingPoints + 2 ):
 
         try:
             if( gamepad.buttons[5] == 1 ):
@@ -82,11 +82,10 @@ if __name__ == '__main__':
 
                     rawInput = np.hstack( ( gp._getVelocity( previousPose, prevPrevPose, cycleTime ),\
                                             gp._getControls( previousActuation ),\
-                                            gp._getControls( prevPrevActuation )\
-                                                                                    ) )
+                                            gp._getControls( prevPrevActuation ) ) )
 
-                    auxPose = np.array( [ previousPose.x, previousPose.y, previousPose.yaw ] ).reshape( common.NbStates, 1 )
-                    auxCtrl = np.array( [ previousActuation.linear.x, previousActuation.angular.z ] ).reshape( common.NbControls, 1 )
+                    auxPose = np.array( [ [ previousPose.x, previousPose.y, previousPose.yaw ] ] ).T
+                    auxCtrl = np.array( [ [ previousActuation.linear.x, previousActuation.angular.z ] ] ).T
 
                     predictionPose = model._ODE( auxPose, auxCtrl, cycleTime )
 
@@ -116,9 +115,6 @@ if __name__ == '__main__':
             print( "[trainGP.py] Something went wrong!" )
 
     print("[trainGP.py] GP training ended.")
-
-    common._pauseFunction( "[trainGP.py] Press [ENTER] to start hyperparameters optimization." )
-    print( "[trainGP.py] Optimization starting." )
 
     input, output = gp._trainingData()
 

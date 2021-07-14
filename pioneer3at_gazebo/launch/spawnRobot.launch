@@ -19,7 +19,7 @@
     <arg name = "headless"      default = "false"/>
     <arg name = "debug"         default = "false"/>
     <arg name = "verbose"       default = "true"/>
-    <arg name = "world"         default = "$(find pioneer3at_gazebo)/worlds/marsYard.world" />
+    <arg name = "world"         default = "$(find pioneer3at_gazebo)/worlds/testMarsYard.world" />
     <arg name = "urdf"          default = "$(find pioneer3at_description)/urdf/pioneer3at.urdf" />
     
     <param name="robot_description" command="$(find xacro)/xacro $(arg urdf)" />

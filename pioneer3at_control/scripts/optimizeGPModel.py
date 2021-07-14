@@ -62,9 +62,9 @@ if __name__ == '__main__':
     for state in range( common.nbOutputs ):
         parametersGP += [ mse[ str(state) ][0, 2] ]
 
-    os.remove(common.pathModel)
+    os.remove(common.pathKernel)
 
-    f = open(common.pathModel, "wb")
+    f = open(common.pathKernel, "wb")
 
     pickle.dump( parametersGP, f )
 

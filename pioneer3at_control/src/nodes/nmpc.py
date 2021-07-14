@@ -16,7 +16,7 @@ from std_msgs.msg import Int32, Float64, Float64MultiArray
 from gazebo_msgs.msg import LinkStates
 from nav_msgs.msg import Path
 from geometry_msgs.msg import Twist, PoseStamped, Point
-from classes import Model, Planner, Common, LGP, localModel, LGP_Record, SOGP
+from classes import Model, Planner, Common, LGP, SOGP
 
 from pioneer3at_control.msg import pose3D, poseRef
 from pioneer3at_control.srv import getPath
@@ -33,11 +33,8 @@ if __name__ == '__main__':
             gp = LGP( common )
 
             gp._saveTrainingData( common.pathInputTrainingData_np, common.pathOutputTrainingData_np )
-            gp._loadPickle( common.pathModel )
-
-            print( "[nmpc.py] Start local models building." )
-            gp._buildInitialLocalModels()
-            print( "[nmpc.py] Initial local models are built." )
+            gp._loadPickle( common.pathKernel, common.pathLocalModels, 0 )
+            gp._loadPickle( common.pathKernel, common.pathLocalModels, 1 )
 
         ###     Sparse Online Gaussian Processes (SOGP)
         elif( common.gpType == 1 ):

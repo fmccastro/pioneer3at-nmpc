@@ -124,8 +124,8 @@ class Common:
 
     #   LGP
     if( gpType == 0 ):
-        limitValue = [ 0.002, 0.0001, 0.33 ]
-        maxDataPts = 250
+        limitValue = [0.000025, 0.0006, 0.00033]
+        maxDataPts = 100
         maxLocalModels = 3 
 
     #   SOGP
@@ -151,7 +151,8 @@ class Common:
     pathInputTrainingData_mat = "/home/fmccastro/Tese_RoverNavigation/ROS_workspaces/wsPy3/src/pioneer3at_viz/trainingData/trainingField1/gp_model_" + str(gpModel) + "/" + str(nbTrainingPoints) + "_training_points/input.mat"
     pathOutputTrainingData_mat = "/home/fmccastro/Tese_RoverNavigation/ROS_workspaces/wsPy3/src/pioneer3at_viz/trainingData/trainingField1/gp_model_" + str(gpModel) + "/" + str(nbTrainingPoints) + "_training_points/output.mat"
 
-    pathModel = "/home/fmccastro/Tese_RoverNavigation/ROS_workspaces/wsPy3/src/pioneer3at_viz/trainingData/trainingField1/gp_model_" + str(gpModel) + "/" + str(nbTrainingPoints) + "_training_points/gp.pickle"
+    pathKernel = "/home/fmccastro/Tese_RoverNavigation/ROS_workspaces/wsPy3/src/pioneer3at_viz/trainingData/trainingField1/gp_model_" + str(gpModel) + "/" + str(nbTrainingPoints) + "_training_points/kernel.pickle"
+    pathLocalModels = "/home/fmccastro/Tese_RoverNavigation/ROS_workspaces/wsPy3/src/pioneer3at_viz/trainingData/trainingField1/gp_model_" + str(gpModel) + "/" + str(nbTrainingPoints) + "_training_points/localModels.pickle"
 
     """
         Terramechanics parameters
@@ -164,7 +165,7 @@ class Common:
     k_phi = 1523.4 * math.pow( 10, 3 )                                                  
     k = 0.025                                                           #   shear deformation modulus
     
-    """ 
+    """
         Robot features
     """
     r = 0.222/2                                                         #   wheel radius
@@ -388,7 +389,6 @@ class Common:
             
             output:
                     diff: scalar in radians
-
         """
 
         diff = angle2 - angle1
@@ -405,14 +405,8 @@ class Common:
 
     def _kernel( self, lengthscales, variance, xp, xq ):
 
-        ###   Squared - exponential kernel
-        w = lengthscales
+        W = np.linalg.matrix_power( np.diag(lengthscales), -2 )
 
-        W = np.zeros( ( len(w), len(w) ) )
+        res = variance * math.exp( -0.5 * ( ( xp - xq ) @ W ) @ ( xp - xq ).T )
 
-        for i in range( len(w) ):
-            W[i, i] = math.pow( w[i], -2 )
-
-        resw = variance * math.exp( -0.5 * ( ( xp - xq ) @ W ) @ ( xp - xq ).T )
-
-        return resw
+        return res
