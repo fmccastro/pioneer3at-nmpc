@@ -18,21 +18,25 @@ if __name__ == '__main__':
     if( common.gpType == 0 ):
         gp = LGP( common )
 
-        gp._saveTrainingData( common.pathInputTrainingData_np, common.pathOutputTrainingData_np )
+        rawInput = np.load( common.pathInputTrainingData_np )
+        rawOutput = np.load( common.pathOutputTrainingData_np )
+
+        gp._saveTrainingData( rawInput[:, common.cutVar:], rawOutput )
         gp._loadPickle( common.pathKernel, common.pathLocalModels, 0 )
+
+        gp._saveTrainingData( rawInput, rawOutput )
 
         print( "[nmpc.py] Start local models building." )
         gp._buildInitialLocalModels()
         print( "[nmpc.py] Initial local models are built." )
 
-        a, b = gp._loadModel()
+        a = gp._loadModel()
 
         os.remove(common.pathLocalModels)
 
         f = open(common.pathLocalModels, "wb")
 
         pickle.dump( a, f )
-        pickle.dump( b, f )
 
         f.close()
 

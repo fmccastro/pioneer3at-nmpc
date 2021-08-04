@@ -18,7 +18,7 @@ from std_msgs.msg import Int32, Float64, Float64MultiArray
 from gazebo_msgs.msg import LinkStates
 from nav_msgs.msg import Path
 from geometry_msgs.msg import Twist, PoseStamped, Point
-from classes import Common, Model, LGP, SOGP, localModel, LGP_Record
+from classes import Common, Model, LGP, SOGP
 
 from pioneer3at_control.msg import pose3D
 from pioneer3at_control.srv import getPath
@@ -80,9 +80,12 @@ if __name__ == '__main__':
                     pose = common.robotPose
                     actuation = common.actuation
 
-                    rawInput = np.hstack( ( gp._getVelocity( previousPose, prevPrevPose, cycleTime ),\
-                                            gp._getControls( previousActuation ),\
-                                            gp._getControls( prevPrevActuation ) ) )
+                    #   { u_k, u_{k-1}, v_{k-1} }
+                    if( common.gpModel == 1 ):
+                        rawInput = np.hstack( ( gp._getOrientation( previousPose ),\
+                                                gp._getVelocity( previousPose, prevPrevPose, cycleTime ),\
+                                                gp._getControls( previousActuation ),\
+                                                gp._getControls( prevPrevActuation ) ) )
 
                     auxPose = np.array( [ [ previousPose.x, previousPose.y, previousPose.yaw ] ] ).T
                     auxCtrl = np.array( [ [ previousActuation.linear.x, previousActuation.angular.z ] ] ).T

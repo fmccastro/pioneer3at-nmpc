@@ -32,13 +32,7 @@ class OPT:
         for _ in range( self.__inputDim ):
             weights.append( 1.0 )
         
-        print( weights)
-        print( len(weights) )
-        
         weights = [0.2, 0.5, 0.9, 0.2, 0.1, 0.35]
-
-        print( weights)
-        print( len(weights) )
 
         for _ in range( self.__outputDim ):
             #self.kernel += [ gpflow.kernels.SquaredExponential( lengthscales = weights ) + gpflow.kernels.White() ]

@@ -26,11 +26,16 @@ if __name__ == '__main__':
 
     for k in range( common.trainingSet ):
         print(k)
-        valInput = input[ div * k : div * ( k + 1 ), : ]
-        valOutput = output[ div * k : div * ( k + 1 ), : ]
 
-        trainInput = np.delete( input, slice( div * k, div * ( k + 1 ) ), 0 )
-        trainOutput = np.delete( output, slice( div * k, div * ( k + 1 ) ), 0 )
+        #   { u_k, u_{k-1}, v_{k-1} }
+        if( common.gpModel == 1 ):
+            valInput = input[ div * k : div * ( k + 1 ), common.cutVar: ]
+            valOutput = output[ div * k : div * ( k + 1 ), : ]
+
+            trainInput = np.delete( input, slice( div * k, div * ( k + 1 ) ), 0 )
+            trainOutput = np.delete( output, slice( div * k, div * ( k + 1 ) ), 0 )
+
+            trainInput = trainInput[ :, common.cutVar: ]
 
         opt._saveTrainingData( trainInput, trainOutput )
         opt._hyperParametersOpt()

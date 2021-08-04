@@ -32,7 +32,10 @@ if __name__ == '__main__':
         if( common.gpType == 0 ):
             gp = LGP( common )
 
-            gp._saveTrainingData( common.pathInputTrainingData_np, common.pathOutputTrainingData_np )
+            rawInput = np.load( common.pathInputTrainingData_np )
+            rawOutput = np.load( common.pathOutputTrainingData_np )
+
+            gp._saveTrainingData( rawInput[ :, common.cutVar: ], rawOutput )
             gp._loadPickle( common.pathKernel, common.pathLocalModels, 0 )
             gp._loadPickle( common.pathKernel, common.pathLocalModels, 1 )
 
@@ -101,6 +104,9 @@ if __name__ == '__main__':
 
     ### Beginning of first optimization ###########################################################################################################################
 
+    if( common.gpOnOff ):
+        out = gp._fullPrediction( pose, k.data )
+
     #   Path or Trajectory tracking
     if( common.refType == 0 ):
         refList = ref.tolist()
@@ -114,14 +120,14 @@ if __name__ == '__main__':
                 solution, optTime = model._solveDMS( [0] * common.N * ( common.NbStates + common.NbControls ),\
                                                 ( common.U_lb + common.X_lb ) * common.N, ( common.U_ub + common.X_ub ) * common.N,\
                                                 [0] * common.N * common.NbStates, [0] * common.N * common.NbStates,\
-                                                        [ pose.x, pose.y, pose.yaw ] + reference.data +\
+                                                        [ pose.x, pose.y, pose.yaw ] + [0] * common.NbControls + reference.data +\
                                                         [0] * common.N * common.nbOutputs, k.data )
 
             else:
                 solution, optTime = model._solveDMS( [0] * common.N * ( common.NbStates + common.NbControls ),\
                                                 ( common.U_lb + common.X_lb ) * common.N, ( common.U_ub + common.X_ub ) * common.N,\
                                                 [0] * common.N * common.NbStates, [0] * common.N * common.NbStates,\
-                                                        [ pose.x, pose.y, pose.yaw ] + reference.data, k.data )
+                                                        [ pose.x, pose.y, pose.yaw ] + [0] * common.NbControls + reference.data, k.data )
 
         #   Direct Single Shooting
         elif( common.transMet == 1 ):
@@ -131,14 +137,14 @@ if __name__ == '__main__':
                 solution, optTime = model._solveDSS( [0] * common.N * ( common.NbControls ),\
                                                 common.U_lb * common.N, common.U_ub * common.N,\
                                                 common.X_lb * common.N, common.X_ub * common.N,\
-                                                        [ pose.x, pose.y, pose.yaw ] + reference.data +\
+                                                        [ pose.x, pose.y, pose.yaw ] + [0] * common.NbControls + reference.data +\
                                                         [0] * common.N * common.nbOutputs, k.data )
 
             else:
                 solution, optTime = model._solveDSS( [0] * common.N * ( common.NbControls ),\
                                                 common.U_lb * common.N, common.U_ub * common.N,\
                                                 common.X_lb * common.N, common.X_ub * common.N,\
-                                                        [ pose.x, pose.y, pose.yaw ] + reference.data, k.data )
+                                                        [ pose.x, pose.y, pose.yaw ] + [0] * common.NbControls + reference.data, k.data )
 
     elif( common.refType == 1 ):
         refList = refPts.tolist()
@@ -152,14 +158,14 @@ if __name__ == '__main__':
                 solution, optTime = model._solveDMS( [0] * common.N * ( common.NbStates + common.NbControls ),\
                                                 ( common.U_lb + common.X_lb ) * common.N, ( common.U_ub + common.X_ub ) * common.N,\
                                                 [0] * common.N * common.NbStates, [0] * common.N * common.NbStates,\
-                                                        [ pose.x, pose.y, pose.yaw ] + reference.data +\
+                                                        [ pose.x, pose.y, pose.yaw ] + [0] * common.NbControls + reference.data +\
                                                         [0] * common.N * common.nbOutputs, k.data )
             
             else:
                 solution, optTime = model._solveDMS( [0] * common.N * ( common.NbStates + common.NbControls ),\
                                                 ( common.U_lb + common.X_lb ) * common.N, ( common.U_ub + common.X_ub ) * common.N,\
                                                 [0] * common.N * common.NbStates, [0] * common.N * common.NbStates,\
-                                                        [ pose.x, pose.y, pose.yaw ] + reference.data, k.data )
+                                                        [ pose.x, pose.y, pose.yaw ] + [0] * common.NbControls + reference.data, k.data )
 
         #   Direct Single Shooting
         elif( common.transMet == 1 ):
@@ -169,14 +175,14 @@ if __name__ == '__main__':
                 solution, optTime = model._solveDSS( [0] * common.N * ( common.NbControls ),\
                                                 common.U_lb * common.N, common.U_ub * common.N,\
                                                 common.X_lb * common.N, common.X_ub * common.N,\
-                                                        [ pose.x, pose.y, pose.yaw ] + reference.data +\
+                                                        [ pose.x, pose.y, pose.yaw ] + [0] * common.NbControls + reference.data +\
                                                         [0] * common.N * common.nbOutputs, k.data )
             
             else:
                 solution, optTime = model._solveDSS( [0] * common.N * ( common.NbControls ),\
                                             common.U_lb * common.N, common.U_ub * common.N,\
                                             common.X_lb * common.N, common.X_ub * common.N,\
-                                                    [ pose.x, pose.y, pose.yaw ] + reference.data, k.data )
+                                                    [ pose.x, pose.y, pose.yaw ] + [0] * common.NbControls + reference.data, k.data )
 
     #   Path Planning with Fast Marching
     elif( common.refType == 2 ):
@@ -194,14 +200,14 @@ if __name__ == '__main__':
                 solution, optTime = model._solveDMS( [0] * common.N * ( common.NbStates + common.NbControls ), 
                                                 ( common.U_lb + common.X_lb ) * common.N, ( common.U_ub + common.X_ub ) * common.N,\
                                                 [0] * common.N * common.NbStates, [0] * common.N * common.NbStates,\
-                                                        [ pose.x, pose.y, pose.yaw ] + ref +\
+                                                        [ pose.x, pose.y, pose.yaw ] + [0] * common.NbControls + ref +\
                                                         [0] * common.N * common.nbOutputs, k.data )
             
             else:
                 solution, optTime = model._solveDMS( [0] * common.N * ( common.NbStates + common.NbControls ), 
                                                 ( common.U_lb + common.X_lb ) * common.N, ( common.U_ub + common.X_ub ) * common.N,\
                                                 [0] * common.N * common.NbStates, [0] * common.N * common.NbStates,\
-                                                        [ pose.x, pose.y, pose.yaw ] + ref, k.data )
+                                                        [ pose.x, pose.y, pose.yaw ] + [0] * common.NbControls + ref, k.data )
 
         #   Direct Single Shooting
         elif( common.transMet == 1 ):
@@ -210,14 +216,14 @@ if __name__ == '__main__':
                 solution, optTime = model._solveDSS( [0] * common.N * common.NbControls,\
                                                 common.U_lb * common.N, common.U_ub * common.N,\
                                                 common.X_lb * common.N, common.X_ub * common.N,\
-                                                        [ pose.x, pose.y, pose.yaw ] + ref +\
+                                                        [ pose.x, pose.y, pose.yaw ] + [0] * common.NbControls + ref +\
                                                         [0] * common.N * common.nbOutputs, k.data )
             
             else:
                 solution, optTime = model._solveDSS( [0] * common.N * common.NbControls,\
                                                 common.U_lb * common.N, common.U_ub * common.N,\
                                                 common.X_lb * common.N, common.X_ub * common.N,\
-                                                        [ pose.x, pose.y, pose.yaw ] + ref, k.data )
+                                                        [ pose.x, pose.y, pose.yaw ] + [0] * common.NbControls + ref, k.data )
 
     #   solutionX -> optimized variables solution
     solutionX = solution['x'].elements()
@@ -293,17 +299,14 @@ if __name__ == '__main__':
 
             ### Optimization beginning ###############################################################################################################################
 
+            a = time.time()
+
             if( common.gpOnOff ):
-                
-                if( k.data > 0 ):
-                    predictionInputs = gp._getPredictionInputs( prevPose, horizon.data, controls, common.gpModel )
-                    out = gp._fullPrediction( predictionInputs )
+                predictionInputs = gp._getPredictionInputs( prevPose, horizon.data, controls, common.gpModel )
+                print(predictionInputs)
+                out = gp._fullPrediction( pose, k.data, predictionInputs )
 
-                else:
-                    out = [0] * common.nbInputs
-
-                print(out)
-                print(out.shape)
+            print( time.time() - a )
 
             #   Path-tracking
             if( common.refType == 0 ):
@@ -325,7 +328,7 @@ if __name__ == '__main__':
                     solution, optTime = model._solveDMS( initialGuess,\
                                                     ( common.U_lb + common.X_lb ) * common.N, ( common.U_ub + common.X_ub ) * common.N,\
                                                     [0] * common.N * common.NbStates, [0] * common.N * common.NbStates,\
-                                                            [ pose.x, pose.y, pose.yaw ] + reference.data, k.data )
+                                                            [ pose.x, pose.y, pose.yaw ] + [0] * common.NbControls + reference.data, k.data )
 
                 #   Direct Single Shooting
                 elif( common.transMet == 1 ):
@@ -343,7 +346,7 @@ if __name__ == '__main__':
                     solution, optTime = model._solveDSS( initialGuess,\
                                                     common.U_lb * common.N, common.U_ub * common.N,\
                                                     common.X_lb * common.N, common.X_ub * common.N,\
-                                                            [ pose.x, pose.y, pose.yaw ] + reference.data, k.data )
+                                                            [ pose.x, pose.y, pose.yaw ] + [0] * common.NbControls + reference.data, k.data )
 
             #   Trajectory tracking
             elif( common.refType == 1 ):
@@ -360,7 +363,7 @@ if __name__ == '__main__':
                     solution, optTime = model._solveDMS( initialGuess,\
                                                     ( common.U_lb + common.X_lb ) * common.N, ( common.U_ub + common.X_ub ) * common.N,\
                                                     [0] * common.N * common.NbStates, [0] * common.N * common.NbStates,\
-                                                            [ pose.x, pose.y, pose.yaw ] + reference.data, k.data )
+                                                            [ pose.x, pose.y, pose.yaw ] + [0] * common.NbControls + reference.data, k.data )
 
                 #   Direct Single Shooting
                 elif( common.transMet == 1 ):
@@ -369,7 +372,7 @@ if __name__ == '__main__':
                     solution, optTime = model._solveDSS( initialGuess,\
                                                     common.U_lb * common.N, common.U_ub * common.N,\
                                                     common.X_lb * common.N, common.X_ub * common.N,\
-                                                            [ pose.x, pose.y, pose.yaw ] + reference.data, k.data )
+                                                            [ pose.x, pose.y, pose.yaw ] + [0] * common.NbControls + reference.data, k.data )
 
             #   Path tracking with Fast Marching
             elif( common.refType == 2 ):
@@ -388,7 +391,7 @@ if __name__ == '__main__':
                     solution, optTime = model._solveDMS( initialGuess,\
                                                 ( common.U_lb + common.X_lb ) * common.N, ( common.U_ub + common.X_ub ) * common.N,\
                                                 [0] * common.N * common.NbStates, [0] * common.N * common.NbStates,\
-                                                    [ pose.x, pose.y, pose.yaw ] + ref, k.data )
+                                                    [ pose.x, pose.y, pose.yaw ] + [0] * common.NbControls + ref, k.data )
                 
                 #   Direct Single Shooting
                 elif( common.transMet == 1 ):
@@ -397,7 +400,7 @@ if __name__ == '__main__':
                     solution, optTime = model._solveDSS( initialGuess,\
                                                 ( common.U_lb ) * common.N, ( common.U_ub ) * common.N,\
                                                 common.X_lb * common.N, common.X_ub * common.N,\
-                                                    [ pose.x, pose.y, pose.yaw ] + ref, k.data )
+                                                    [ pose.x, pose.y, pose.yaw ] + [0] * common.NbControls + ref, k.data )
 
             #   solutionX -> optimized variables solution
             solutionX = solution['x'].elements()

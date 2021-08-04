@@ -15,7 +15,6 @@ class Model:
     def __init__( self, common, gp = None ):
         
         """
-
             #   Arguments:
                     Nx:                 Number of states
                     Nu:                 Number of controls
@@ -27,7 +26,6 @@ class Model:
                     lowerBounds:        Constraints Lower Bounds
                     upperBounds:        Constraints Upper Bounds 
                     samplingTime:       Sampling Time
-
         """
         
         self.__Nx = common.NbStates                
@@ -42,15 +40,20 @@ class Model:
         self.__ode = common._ode
         self.__transMethod = common.transMet
         self.__opt = common.optType
+
         self.__J = common._costFunction
+        self.__Jopt = common.costFunction
+
         self.__weightMatrix_1 = common.Q
         self.__weightMatrix_2 = common.R
+        self.__weightMatrix_3 = common.P
 
         self.__gp = gp
         self.__gpOnOff = common.gpOnOff
 
         states = ca.SX.sym( 'states', self.__Nx )
         controls = ca.SX.sym( 'controls', self.__Nu )
+        prevControls = ca.SX.sym( 'prevControls', self.__Nu )
         deltaTime = ca.SX.sym( 'deltaTime', 1 )
         statesRef = ca.SX.sym( 'statesRef', self.__Nx )
         
@@ -60,6 +63,7 @@ class Model:
         X0 = ca.SX.sym( 'X0', self.__Nx )
         X_Ref = ca.SX.sym( 'X0_Ref', self.__Nx )
         U = ca.SX.sym( 'U', self.__Nu )
+        prevU = ca.SX.sym( 'prevU', self.__Nu )
 
         if( self.__opt == 0 ):
             self.__optOptions = { 'qpsol': 'qpoases', 'qpsol_options': { 'printLevel': 'none' }, 'expand': True }
@@ -148,35 +152,35 @@ class Model:
             gp = ca.SX.sym( 'gp', self.__nbOutputs )
 
             ###     Explicit Runge-Kutta Integrator     ######
-            f = ca.Function( 'f', [ states, statesRef, controls, gp_def ],\
+            f = ca.Function( 'f', [ states, statesRef, controls, prevControls, gp_def ],\
                                         [ self.__ode( states, controls, gp = gp_def ),\
-                                            self.__J( states, statesRef, controls, self.__weightMatrix_1, self.__weightMatrix_2, 0 ) ] )
+                                            self.__J( states, statesRef, controls, prevControls, self.__weightMatrix_1, self.__weightMatrix_2, self.__weightMatrix_3, self.__Jopt ) ] )
             
             for _ in range( self.__M ):
-                k1, k1_q = f( X, X_Ref, U, gp )
-                k2, k2_q = f( X + DT/2 * k1, X_Ref, U, gp )
-                k3, k3_q = f( X + DT/2 * k2, X_Ref, U, gp )
-                k4, k4_q = f( X + DT * k3, X_Ref, U, gp )
+                k1, k1_q = f( X, X_Ref, U, prevU, gp )
+                k2, k2_q = f( X + DT/2 * k1, X_Ref, U, prevU, gp )
+                k3, k3_q = f( X + DT/2 * k2, X_Ref, U, prevU, gp )
+                k4, k4_q = f( X + DT * k3, X_Ref, U, prevU, gp )
 
                 X = X + DT / 6 * ( k1 + 2 * k2 + 2 * k3 + k4 )
                 Q = Q + DT / 6 * ( k1_q + 2 * k2_q + 2 * k3_q + k4_q )
-            self.__F = ca.Function( 'F', [ X0, X_Ref, U, gp ], [ X, Q ] )
+            self.__F = ca.Function( 'F', [ X0, X_Ref, U, prevU, gp ], [ X, Q ] )
         
         else:
             ###     Explicit Runge-Kutta Integrator     ######
-            f = ca.Function( 'f', [ states, statesRef, controls ],\
+            f = ca.Function( 'f', [ states, statesRef, controls, prevControls ],\
                                         [ self.__ode( states, controls ),\
-                                            self.__J( states, statesRef, controls, self.__weightMatrix_1, self.__weightMatrix_2, 0 ) ] )
+                                            self.__J( states, statesRef, controls, prevControls, self.__weightMatrix_1, self.__weightMatrix_2, self.__weightMatrix_3, self.__Jopt ) ] )
             
             for _ in range( self.__M ):
-                k1, k1_q = f( X, X_Ref, U )
-                k2, k2_q = f( X + DT/2 * k1, X_Ref, U )
-                k3, k3_q = f( X + DT/2 * k2, X_Ref, U )
-                k4, k4_q = f( X + DT * k3, X_Ref, U )
+                k1, k1_q = f( X, X_Ref, U, prevU )
+                k2, k2_q = f( X + DT/2 * k1, X_Ref, U, prevU )
+                k3, k3_q = f( X + DT/2 * k2, X_Ref, U, prevU )
+                k4, k4_q = f( X + DT * k3, X_Ref, U, prevU )
 
                 X = X + DT / 6 * ( k1 + 2 * k2 + 2 * k3 + k4 )
                 Q = Q + DT / 6 * ( k1_q + 2 * k2_q + 2 * k3_q + k4_q )
-            self.__F = ca.Function( 'F', [ X0, X_Ref, U ], [ X, Q ] )
+            self.__F = ca.Function( 'F', [ X0, X_Ref, U, prevU ], [ X, Q ] )
 
         #############################################################################################################################
         #############################################################################################################################
@@ -194,18 +198,22 @@ class Model:
         """ Parameters """
         _initPose = ca.SX.sym( '_initPose', self.__Nx )
         _reference = ca.SX.sym( '_reference', self.__N * self.__Nx )
+        _prevCtrl = ca.SX.sym( '_prevCtrl', self.__Nu )
         
         if( self.__gpOnOff ):
             _gp = ca.SX.sym( '_gp', self.__nbOutputs * self.__N )
 
-            param_s = ca.vertcat( _initPose, _reference, _gp )
+            param_s = ca.vertcat( _initPose, _prevCtrl, _reference, _gp )
         
         else:
-            param_s = ca.vertcat( _initPose, _reference )
+            param_s = ca.vertcat( _initPose, _prevCtrl, _reference )
 
         for k in range( self.__N ):
             
             #   New NLP variable for the control
+            if( k > 0 ):
+                prevUk = Uk
+
             Uk = ca.SX.sym( 'U_' + str(k), self.__Nu )
             w += [ Uk ]
 
@@ -213,17 +221,17 @@ class Model:
 
             if( k == 0 ):
                 if( self.__gpOnOff ):
-                    Fk = self.__F( _initPose, currentRef, Uk, ca.vertcat( _gp[ k * self.__nbOutputs ], _gp[ k * self.__nbOutputs + 1 ], _gp[ k * self.__nbOutputs + 2 ] ) )
+                    Fk = self.__F( _initPose, currentRef, Uk, _prevCtrl, ca.vertcat( _gp[ k * self.__nbOutputs ], _gp[ k * self.__nbOutputs + 1 ], _gp[ k * self.__nbOutputs + 2 ] ) )
 
                 else:
-                    Fk = self.__F( _initPose, currentRef, Uk )
+                    Fk = self.__F( _initPose, currentRef, Uk, _prevCtrl )
                     
             else:
                 if( self.__gpOnOff ):
-                    Fk = self.__F( Xk, currentRef, Uk, ca.vertcat( _gp[ k * self.__nbOutputs ], _gp[ k * self.__nbOutputs + 1 ], _gp[ k * self.__nbOutputs + 2 ] ) )
+                    Fk = self.__F( Xk, currentRef, Uk, prevUk, ca.vertcat( _gp[ k * self.__nbOutputs ], _gp[ k * self.__nbOutputs + 1 ], _gp[ k * self.__nbOutputs + 2 ] ) )
 
                 else:
-                    Fk = self.__F( Xk, currentRef, Uk )
+                    Fk = self.__F( Xk, currentRef, Uk, prevUk )
 
             Xk_end = Fk[0]
             _costFunction += Fk[1]
@@ -255,6 +263,9 @@ class Model:
         for k in range( self.__N ):
             
             #   New NLP variable for the control
+            if( k > 0 ):
+                prevUk = Uk
+
             Uk = ca.SX.sym( 'U_' + str(k), self.__Nu )
             w += [ Uk ]
 
@@ -262,17 +273,17 @@ class Model:
 
             if( k == 0 ):
                 if( self.__gpOnOff ):
-                    Fk = self.__F( _initPose, currentRef, Uk, ca.vertcat( _gp[ k * self.__nbOutputs ], _gp[ k * self.__nbOutputs + 1 ], _gp[ k * self.__nbOutputs + 2 ] ) )
+                    Fk = self.__F( _initPose, currentRef, Uk, _prevCtrl, ca.vertcat( _gp[ k * self.__nbOutputs ], _gp[ k * self.__nbOutputs + 1 ], _gp[ k * self.__nbOutputs + 2 ] ) )
                 
                 else:
-                    Fk = self.__F( _initPose, currentRef, Uk )
+                    Fk = self.__F( _initPose, currentRef, Uk, _prevCtrl )
 
             else:
                 if( self.__gpOnOff ):
-                    Fk = self.__F( Xk, currentRef, Uk, ca.vertcat( _gp[ k * self.__nbOutputs ], _gp[ k * self.__nbOutputs + 1 ], _gp[ k * self.__nbOutputs + 2 ] ) )
+                    Fk = self.__F( Xk, currentRef, Uk, prevUk, ca.vertcat( _gp[ k * self.__nbOutputs ], _gp[ k * self.__nbOutputs + 1 ], _gp[ k * self.__nbOutputs + 2 ] ) )
                 
                 else:
-                    Fk = self.__F( Xk, currentRef, Uk )
+                    Fk = self.__F( Xk, currentRef, Uk, prevUk )
 
             Xk = Fk[0]
             _costFunction += Fk[1]

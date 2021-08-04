@@ -47,6 +47,10 @@ class Common:
     """ Penalty Matrices """
     Q = ca.diag( ca.SX( [ 0.8, 0.8, 0.8 ] ) )                           #   States Matrix
     R = ca.diag( ca.SX( [ 0.1, 0.1 ] ) )                                #   Controls Matrix
+    P = ca.diag( ca.SX( [ 0.8, 0.8 ] ) )                                #   Penalty matrix for controls variation
+
+    """ Cost Function choice """
+    costFunction = 1                                                    #   choose cost function
 
     """ Goal Point on [Px] units """
     goalPoint = np.array( [ 8.13840156, -13.791423 ] )
@@ -88,7 +92,7 @@ class Common:
                                  1 -> trajectory
                                  2 -> fast marching path
     """
-    refType = 1
+    refType = 2
 
     """
         Cost map for fast marching gradient computation
@@ -124,9 +128,18 @@ class Common:
 
     #   LGP
     if( gpType == 0 ):
-        limitValue = [0.000025, 0.0006, 0.00033]
-        maxDataPts = 100
-        maxLocalModels = 3 
+
+        #   Bins features
+        angleDiscretization = 40
+        velDiscretization = 7
+
+        c_roll = 2
+        c_pitch = 2
+        c_vel  = 1
+
+        cutVar = 2
+
+        maxDataPts = 4
 
     #   SOGP
     elif( gpType == 1 ):
@@ -335,9 +348,10 @@ class Common:
 
         return ca.vertcat(*dxdt)
 
-    def _costFunction( self, x, xRef, u, statesMatrix, controlsMatrix, option, obstacles = None ):
+    def _costFunction( self, x, xRef, u, prevU, statesMatrix, controlsMatrix, deltaCtrlMatrix, option ):
 
         A = xRef - x
+        deltaU = u - prevU
 
         A[2] = ca.if_else( A[2] > math.pi, A[2] - 2 * math.pi, ca.if_else( A[2] <= -math.pi, A[2] + 2 * math.pi, A[2] ) )
 
@@ -345,13 +359,13 @@ class Common:
         if( option == 0 ):
             J = ca.mtimes( ca.mtimes( A.T, statesMatrix ), A ) + ca.mtimes( ca.mtimes( u.T, controlsMatrix ), u )
 
-        #   Weighting tracking, controls and found obstacles by a point-repulsive technique
+        #   Weighting tracking, controls and controls increment
         elif( option == 1 ):
-
-            P = 1 / ( ( x[0] )**2 + ( x[1] )**2 + 0.01 )
-
-            J = ca.mtimes( ca.mtimes( A.T, statesMatrix ), A ) + ca.mtimes( ca.mtimes( u.T, controlsMatrix ), u ) + P
-
+            J = ca.mtimes( ca.mtimes( A.T, statesMatrix ), A ) + ca.mtimes( ca.mtimes( u.T, controlsMatrix ), u ) + ca.mtimes( ca.mtimes( deltaU.T, deltaCtrlMatrix ), deltaU )
+        
+        elif( option == 2 ):
+            J = ca.mtimes( ca.mtimes( A.T, statesMatrix ), A ) + ca.mtimes( ca.mtimes( deltaU.T, deltaCtrlMatrix ), deltaU )
+            
         return J
 
     def _distanceBtwPoints( self, point1, point2, opt ):
