@@ -104,8 +104,11 @@ if __name__ == '__main__':
 
     ### Beginning of first optimization ###########################################################################################################################
 
+    a = time.time()
     if( common.gpOnOff ):
         out = gp._fullPrediction( pose, k.data )
+
+    print( time.time() - a )
 
     #   Path or Trajectory tracking
     if( common.refType == 0 ):
@@ -120,8 +123,7 @@ if __name__ == '__main__':
                 solution, optTime = model._solveDMS( [0] * common.N * ( common.NbStates + common.NbControls ),\
                                                 ( common.U_lb + common.X_lb ) * common.N, ( common.U_ub + common.X_ub ) * common.N,\
                                                 [0] * common.N * common.NbStates, [0] * common.N * common.NbStates,\
-                                                        [ pose.x, pose.y, pose.yaw ] + [0] * common.NbControls + reference.data +\
-                                                        [0] * common.N * common.nbOutputs, k.data )
+                                                        [ pose.x, pose.y, pose.yaw ] + [0] * common.NbControls + reference.data + out, k.data )
 
             else:
                 solution, optTime = model._solveDMS( [0] * common.N * ( common.NbStates + common.NbControls ),\
@@ -137,8 +139,7 @@ if __name__ == '__main__':
                 solution, optTime = model._solveDSS( [0] * common.N * ( common.NbControls ),\
                                                 common.U_lb * common.N, common.U_ub * common.N,\
                                                 common.X_lb * common.N, common.X_ub * common.N,\
-                                                        [ pose.x, pose.y, pose.yaw ] + [0] * common.NbControls + reference.data +\
-                                                        [0] * common.N * common.nbOutputs, k.data )
+                                                        [ pose.x, pose.y, pose.yaw ] + [0] * common.NbControls + reference.data + out, k.data )
 
             else:
                 solution, optTime = model._solveDSS( [0] * common.N * ( common.NbControls ),\
@@ -158,8 +159,7 @@ if __name__ == '__main__':
                 solution, optTime = model._solveDMS( [0] * common.N * ( common.NbStates + common.NbControls ),\
                                                 ( common.U_lb + common.X_lb ) * common.N, ( common.U_ub + common.X_ub ) * common.N,\
                                                 [0] * common.N * common.NbStates, [0] * common.N * common.NbStates,\
-                                                        [ pose.x, pose.y, pose.yaw ] + [0] * common.NbControls + reference.data +\
-                                                        [0] * common.N * common.nbOutputs, k.data )
+                                                        [ pose.x, pose.y, pose.yaw ] + [0] * common.NbControls + reference.data + out, k.data )
             
             else:
                 solution, optTime = model._solveDMS( [0] * common.N * ( common.NbStates + common.NbControls ),\
@@ -175,8 +175,7 @@ if __name__ == '__main__':
                 solution, optTime = model._solveDSS( [0] * common.N * ( common.NbControls ),\
                                                 common.U_lb * common.N, common.U_ub * common.N,\
                                                 common.X_lb * common.N, common.X_ub * common.N,\
-                                                        [ pose.x, pose.y, pose.yaw ] + [0] * common.NbControls + reference.data +\
-                                                        [0] * common.N * common.nbOutputs, k.data )
+                                                        [ pose.x, pose.y, pose.yaw ] + [0] * common.NbControls + reference.data + out, k.data )
             
             else:
                 solution, optTime = model._solveDSS( [0] * common.N * ( common.NbControls ),\
@@ -200,8 +199,7 @@ if __name__ == '__main__':
                 solution, optTime = model._solveDMS( [0] * common.N * ( common.NbStates + common.NbControls ), 
                                                 ( common.U_lb + common.X_lb ) * common.N, ( common.U_ub + common.X_ub ) * common.N,\
                                                 [0] * common.N * common.NbStates, [0] * common.N * common.NbStates,\
-                                                        [ pose.x, pose.y, pose.yaw ] + [0] * common.NbControls + ref +\
-                                                        [0] * common.N * common.nbOutputs, k.data )
+                                                        [ pose.x, pose.y, pose.yaw ] + [0] * common.NbControls + ref + out, k.data )
             
             else:
                 solution, optTime = model._solveDMS( [0] * common.N * ( common.NbStates + common.NbControls ), 
@@ -216,8 +214,7 @@ if __name__ == '__main__':
                 solution, optTime = model._solveDSS( [0] * common.N * common.NbControls,\
                                                 common.U_lb * common.N, common.U_ub * common.N,\
                                                 common.X_lb * common.N, common.X_ub * common.N,\
-                                                        [ pose.x, pose.y, pose.yaw ] + [0] * common.NbControls + ref +\
-                                                        [0] * common.N * common.nbOutputs, k.data )
+                                                        [ pose.x, pose.y, pose.yaw ] + [0] * common.NbControls + ref + out, k.data )
             
             else:
                 solution, optTime = model._solveDSS( [0] * common.N * common.NbControls,\
@@ -303,9 +300,8 @@ if __name__ == '__main__':
 
             if( common.gpOnOff ):
                 predictionInputs = gp._getPredictionInputs( prevPose, horizon.data, controls, common.gpModel )
-                print(predictionInputs)
-                out = gp._fullPrediction( pose, k.data, predictionInputs )
-
+                out = gp._fullPrediction( pose, k.data, predInputs = predictionInputs )
+            
             print( time.time() - a )
 
             #   Path-tracking

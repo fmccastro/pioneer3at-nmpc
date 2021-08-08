@@ -71,6 +71,9 @@ class LGP:
         self.cPitch = common.c_pitch
         self.cVel = common.c_vel
 
+        self.prevInd = []
+        self.ind = []
+
         self.cutVar = common.cutVar
 
         """
@@ -270,18 +273,19 @@ class LGP:
 
         return X
 
-    def _assembleLocalModels( self, minPhi, maxPhi, minTheta, maxTheta, index, test = None ):
+    def _assembleLocalModels( self, minPhi, maxPhi, minTheta, maxTheta, iteration, test = None ):
         
         """
             Make prediction for a given "state" with query point "test"
         """
 
-        if( index == 0 ):
+        if( iteration == 0 ):
             velIndex = 0
-
-        elif( index > 0 ):
+        
+        elif( iteration > 0 ):
             velIndex = test[0, 4] * ( self.velDiscretization / self.linVel_max )
-            velIndex = int( round( velIndex ) )
+        
+        velIndex = int( round( velIndex ) )
 
         minVel = velIndex - self.cVel
         maxVel = velIndex + self.cVel
@@ -295,21 +299,28 @@ class LGP:
         ###
         funOutput = []
 
-        for k in range( self.outputDim ):
+        if( iteration == 0 ):
             index = 0
-            state_str = str(k)
 
             for i in range( minPhi, maxPhi + 1 ):
                 for j in range( minTheta, maxTheta + 1 ):
                     for l in range( minVel, maxVel + 1 ):
+                        predInd = str(i) + "_" + str(j) + "_" + str(l)
+                        
+                        if( self.bin[predInd] != None ):
+                            self.ind += [predInd]
 
-                        if( self.bin[str(i) + "_" + str(j) + "_" + str(l)] != None ):
-                            dataInput = self.bin[str(i) + "_" + str(j) + "_" + str(l)]['inputs']
-                            dataOutput = self.bin[str(i) + "_" + str(j) + "_" + str(l)]['outputs']
+                            dataInput = self.bin[predInd]['inputs']
+                            dataOutput = self.bin[predInd]['outputs']
                             
                             for p in range( dataInput.shape[0] ):
-                                input  = dataInput[p, :].reshape(1, -1)
-                                output = dataOutput[p, :].reshape(1, -1)
+                                input  = np.hstack( ( np.array( [ [ predInd ] ] ), dataInput[p, :].reshape(1, -1) ) )
+                                output = np.hstack( ( np.array( [ [ predInd ] ] ), dataOutput[p, :].reshape(1, -1) ) )
+
+                                print( input )
+                                print( output[0, 1] )
+
+                                inputForUse = input[0, 1:].reshape(1, -1)
 
                                 if( index == 0 ):
                                     _outputs = output
@@ -317,35 +328,41 @@ class LGP:
                                 elif( index > 0 ):
                                     _outputs = np.vstack( ( _outputs, output ) )
 
-                                if( self.predVector[state_str] == None ):
-                                    k_new_scl = self.kernel[k]( input, input ).numpy()
+                                for k in range( self.outputDim ):
+                                    state_str = str(k)
 
-                                    #gram = np.array( k_new_scl ) + np.array( [ [ self.kernel[j].kernels[1].variance.numpy() ] ] )
-                                    gram = k_new_scl + np.array( [ [ self.gpModel[k].likelihood.variance.numpy() ] ] )
+                                    if( self.predVector[state_str] == None ):
+                                        k_new_scl = self.kernel[k]( inputForUse, inputForUse ).numpy()
+                                        print( k_new_scl )
 
-                                    alpha = np.linalg.inv( gram ) @ output[ 0, k ].reshape( 1, 1 )
+                                        #gram = np.array( k_new_scl ) + np.array( [ [ self.kernel[j].kernels[1].variance.numpy() ] ] )
+                                        gram = k_new_scl + np.array( [ [ self.gpModel[k].likelihood.variance.numpy() ] ] )
 
-                                    ch = np.sqrt( gram )
+                                        print( output[ 0, k + 1 ] )
 
-                                    self.predVector[state_str] = { 'predictionVector': alpha, 'cholesky': ch }
-                                
-                                else:
-                                    K_new = self.kernel[k]( input, _inputs ).numpy()
+                                        alpha = np.linalg.inv( gram ) @ output[ 0, k + 1 ].reshape( 1, 1 )
+
+                                        ch = np.sqrt( gram )
+
+                                        self.predVector[state_str] = { 'predictionVector': alpha, 'cholesky': ch }
                                     
-                                    k_new_scl = self.kernel[k]( input, input ).numpy()[0, 0]
+                                    else:
+                                        K_new = self.kernel[k]( inputForUse, _inputs[:, 1:] ).numpy()
+                                        
+                                        k_new_scl = self.kernel[k]( inputForUse, inputForUse ).numpy()[0, 0]
 
-                                    #kernel_var = self.kernel[j].kernels[1].variance.numpy()
-                                    model_var = self.gpModel[k].likelihood.variance.numpy()
+                                        #kernel_var = self.kernel[j].kernels[1].variance.numpy()
+                                        model_var = self.gpModel[k].likelihood.variance.numpy()
 
-                                    cholesky = self.predVector[state_str][ 'cholesky' ]
+                                        cholesky = self.predVector[state_str][ 'cholesky' ]
 
-                                    l = self._forwardSubs( cholesky, K_new )
+                                        l = self._forwardSubs( cholesky, K_new.T )
 
-                                    self.predVector[state_str][ 'cholesky' ] = self._updateCholesky( cholesky, model_var, k_new_scl, l )
+                                        self.predVector[state_str][ 'cholesky' ] = self._updateCholesky( cholesky, model_var, k_new_scl, l )
 
-                                    ch = self.predVector[state_str][ 'cholesky' ]
+                                        ch = self.predVector[state_str][ 'cholesky' ]
 
-                                    self.predVector[state_str][ 'predictionVector' ] = self._predictionVector( ch, _outputs[:, k] )
+                                        self.predVector[state_str][ 'predictionVector' ] = self._predictionVector( ch, _outputs[:, k + 1].reshape(-1, 1) )
                                 
                                 if( index == 0 ):
                                     _inputs = input
@@ -354,9 +371,32 @@ class LGP:
                                     _inputs = np.vstack( ( _inputs, input ) )
                                 
                                 index += 1
-            
-            funOutput += [ [ self.predVector[state_str][ 'predictionVector' ], _inputs ] ]
+
+        elif( iteration > 0 ):
+            index = 0
+
+            self.prevInd = self.ind
+            self.ind = []
+
+            for i in range( minPhi, maxPhi + 1 ):
+                for j in range( minTheta, maxTheta + 1 ):
+                    for l in range( minVel, maxVel + 1 ):
+                        predInd = str(i) + "_" + str(j) + "_" + str(l)
+
+                        if( self.bin[predInd] != None ):
+                            self.ind += [predInd]
+
+            ind_prevInd = list( set( self.prevInd ).intersection( set( self.ind ) ) )
+
+            print( ind_prevInd )
+
+            #ind_not_prevInd
+            #prevInd_not_ind
         
+        for i in range( self.outputDim ):
+            state_str = str(i)
+            funOutput += [ [ self.predVector[state_str][ 'predictionVector' ], _inputs[:, 1:] ] ]
+
         return funOutput
     
     def _fullPrediction( self, pose, iteration, predInputs = None ):
@@ -385,30 +425,30 @@ class LGP:
         if( maxPitch >= self.angleDiscretization ):
             maxPitch = self.angleDiscretization
 
-        pv = []
-
         if( iteration == 0 ):
-                pv = self._assembleLocalModels( minRoll, maxRoll, minPitch, maxPitch, iteration )
-        
+            pv = self._assembleLocalModels( minRoll, maxRoll, minPitch, maxPitch, iteration )
+
         elif( iteration > 0 ):
-                pv = self._assembleLocalModels( minRoll, maxRoll, minPitch, maxPitch, iteration, test = predInputs )
-        
-        for j in range( predInputs.shape[0] ):
+            pv = self._assembleLocalModels( minRoll, maxRoll, minPitch, maxPitch, iteration, test = predInputs[0, :].reshape(1, -1) )
+
+        fullOutput = []
+
+        for j in range( self._N ):
+
+            output = []
+
+            if( iteration == 0 ):
+                test = np.zeros( ( 1, self.inputDim ) )
+
+            elif( iteration > 0 ):
+                test = predInputs[j, :].reshape(1, -1)
 
             for i in range( self.outputDim ):
-                k = self.kernel[i]( predInputs[j, :].reshape(1, -1), pv[i, 1] ).numpy()
+                k = self.kernel[i]( test, pv[i][1] ).numpy()
 
-                if( i == 0 ):
-                    output = k @ pv[i, 0]
-                
-                elif( i > 0 ):
-                    output = np.hstack( ( k @ pv[i, 0], output ) )
-
-            if( j == 0 ):
-                fullOutput = output
-    
-            elif( j > 0 ):
-                fullOutput = np.vstack( ( fullOutput, output ) )
+                output += [ ( k @ pv[i][0] )[0, 0] ]
+            
+            fullOutput += output
 
         return fullOutput
 
