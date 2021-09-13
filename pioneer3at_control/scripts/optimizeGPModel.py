@@ -2,8 +2,9 @@
 from __future__ import absolute_import
 from __future__ import division
 
-import pickle, os
+import pickle, os, sys
 import numpy as np
+import matplotlib.pyplot as plt 
 
 from sys import path
 path.append(r"/home/fmccastro/Tese_RoverNavigation/ROS_workspaces/wsPy3/src/pioneer3at_control/src")
@@ -16,16 +17,21 @@ if __name__ == '__main__':
 
     opt = OPT( common )
 
-    input = np.load(common.pathInputTrainingData_np)
-    output = np.load(common.pathOutputTrainingData_np)
+    input = np.load( common.pathInputTrainingData_np )
+    output = np.load( common.pathOutputTrainingData_np )
+
+    """for i in range( input.shape[0] ):
+        if( np.linalg.norm( input[i, :].reshape(1, -1) - np.array( [0] * input.shape[1] ).reshape(1, -1) ) < 0.1 ):
+            input = np.delete( input, i, 0 )
+            output = np.delete( output, i, 0 )
+            i = i - 2"""
 
     mse = {}
 
     div = int( (common.nbTrainingPoints / common.trainingSet) )
-    print( div )
 
     for k in range( common.trainingSet ):
-        print(k)
+        print("Index: ", k)
 
         #   { u_k, u_{k-1}, v_{k-1} }
         if( common.gpModel == 1 ):
@@ -45,8 +51,6 @@ if __name__ == '__main__':
 
         for state in range( common.nbOutputs ):
 
-            print(state, valError[state], trainError[state] )
-
             parametersGP = opt._loadParameters( state )
 
             if( k == 0 ):
@@ -57,10 +61,6 @@ if __name__ == '__main__':
 
     for state in range( common.nbOutputs ):
         mse[ str(state) ] = mse[ str(state) ][ ( mse[ str(state) ][ :, 0 ] ).argsort() ]
-
-    print( "1", mse['0'] )
-    print( "2", mse['1'] )
-    print( "3", mse['2'] )
 
     parametersGP = []
 

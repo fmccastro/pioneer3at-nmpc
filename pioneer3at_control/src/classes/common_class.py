@@ -85,7 +85,7 @@ class Common:
         Reference Pose: 0 -> true pose (from Gazebo) 
                         1 -> fused pose ( IMU + Odometry) from robot_localization package
     """
-    poseType = 0
+    poseType = 1
 
     """
         Tracking Reference Type: 0 -> path
@@ -116,7 +116,7 @@ class Common:
                                     #   4   -> SQP method + jit
     
     """ Enable/Disable Gaussian Processes """
-    gpOnOff = True                                                      #   On (True), Off (False)
+    gpOnOff = False                                                     #   On (True), Off (False)
 
     """ Hyper-parameters optimization """
     hyperOpt = 0                                                        #   0   ->  NLL
@@ -130,8 +130,11 @@ class Common:
     if( gpType == 0 ):
 
         #   Bins features
-        angleDiscretization = 40
-        velDiscretization = 7
+        angleDiscretization = 3
+        velDiscretization = 3
+
+        maxRoll = math.pi / 2
+        maxPitch = math.pi / 2
 
         c_roll = 2
         c_pitch = 2
@@ -192,16 +195,31 @@ class Common:
         self.fusedPose = Odometry()
         self.robotPose = pose3D()
 
+        ###
+
         self.actuation = Twist()
+        self.velocity = Twist()
+
+        ###
 
         self.step = Int32()
-        self.initCounter = Int32()
+
+        ###
+
+        #self.initCounter = Int32()
 
         self.clock = Float64()
         self.cycleTime = Float64()
+        self.optTime = Float64()
+        self.distance = Float64()
+
+        ###
 
         self.pathSequence = Float64MultiArray()
         self.refSequence = Float64MultiArray()
+        self.error = Float64MultiArray()
+
+        ###
 
         self.poseRef = poseRef()
 
@@ -282,6 +300,8 @@ class Common:
     
     def _quaternionToRPY( self, quaternion ):
 
+        #print("Quaternion: ", quaternion )
+
         r = R.from_quat( [ quaternion.x, quaternion.y, quaternion.z, quaternion.w ] )
 
         return r.as_rotvec()
@@ -310,6 +330,9 @@ class Common:
 
             rpy = self._quaternionToRPY( self.fusedPose.pose.pose.orientation )
 
+            #print( rpy )
+            #print( len(rpy) )
+
             pose.roll = rpy[0]
             pose.pitch = rpy[1]
             pose.yaw = rpy[2]
@@ -331,7 +354,6 @@ class Common:
     def _ode( self, x, u, gp = None ):
 
         if( gp == None ):
-            
             dxdt = [
                         ca.cos( x[2] ) * u[0],
                         ca.sin( x[2] ) * u[0],
@@ -339,7 +361,6 @@ class Common:
                     ]
         
         else:
-
             dxdt = [
                         ca.cos( x[2] ) * u[0] + gp[0],
                         ca.sin( x[2] ) * u[0] + gp[1],
@@ -408,11 +429,9 @@ class Common:
         diff = angle2 - angle1
 
         if( diff > math.pi ):
-        
             diff = diff - 2 * math.pi
         
         elif( diff <= - math.pi ):
-
             diff = diff + 2 * math.pi
 
         return diff

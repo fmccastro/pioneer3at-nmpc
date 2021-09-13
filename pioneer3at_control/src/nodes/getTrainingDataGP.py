@@ -50,6 +50,7 @@ if __name__ == '__main__':
     rospy.init_node( 'getTrainingDataGP', anonymous = True )
 
     rospy.Subscriber( '/pioneer3at/robotPose', pose3D, common._poseCallback, 2 )                    #   '/pioneer3at/robotPose' -> topic for pose
+    rospy.Subscriber( '/pioneer3at/robotVel', Twist, common._TwistCallback, 1 )                     #   '/pioneer3at/robotVel' -> topic for robot velocity
     rospy.Subscriber( '/pioneer3at/cmd_vel', Twist, common._TwistCallback, 0 )                      #   '/pioneer3at/cmd_vel' -> topic to listen actuation inputs
     rospy.Subscriber( '/joy', Joy, joyCallback )
 
@@ -72,18 +73,28 @@ if __name__ == '__main__':
 
                 if( index >= 2 ):
                     prevPrevPose = previousPose
+                    prevPrevVel = previousVel
+
                     prevPrevActuation = previousActuation
 
+                    ###
+
                     previousPose = pose
+                    previousVel = vel
+
                     previousActuation = actuation
 
+                    ###
+
                     pose = common.robotPose
+                    vel = common.velocity
+                    
                     actuation = common.actuation
 
                     #   { u_k, u_{k-1}, v_{k-1} }
                     if( common.gpModel == 1 ):
                         rawInput = np.hstack( ( gp._getOrientation( previousPose ),\
-                                                gp._getVelocity( previousPose, prevPrevPose, cycleTime ),\
+                                                gp._getVelocity( prevPrevVel ),\
                                                 gp._getControls( previousActuation ),\
                                                 gp._getControls( prevPrevActuation ) ) )
 
@@ -100,13 +111,21 @@ if __name__ == '__main__':
 
                 elif( index >= 1 ):
                     previousPose = pose
+                    previousVel = vel
+                    
                     previousActuation = actuation
 
+                    ###
+
                     pose = common.robotPose
+                    vel = common.velocity
+
                     actuation = common.actuation
                 
                 else:
                     pose = common.robotPose
+                    vel = common.velocity
+
                     actuation = common.actuation
                 
                 index += 1

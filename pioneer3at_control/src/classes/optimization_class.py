@@ -4,6 +4,9 @@ from __future__ import division
 
 import gpflow, math, time, pickle
 
+from sklearn.gaussian_process import GaussianProcessRegressor
+from sklearn.gaussian_process.kernels import RBF, WhiteKernel, ConstantKernel
+
 import numpy as np
 
 from gpflow.utilities import print_summary
@@ -37,7 +40,7 @@ class OPT:
         for _ in range( self.__outputDim ):
             #self.kernel += [ gpflow.kernels.SquaredExponential( lengthscales = weights ) + gpflow.kernels.White() ]
             self.kernel += [ gpflow.kernels.SquaredExponential( lengthscales = weights ) ]
-    
+
     def _saveTrainingData( self, rawInput, rawOutput ):
         self.__rawInputData = rawInput
         self.__rawOutputData = rawOutput
@@ -56,9 +59,10 @@ class OPT:
 
             ###
 
-            self.gpModel += [ gpflow.models.GPR( data = ( self.__rawInputData, self.__rawOutputData[ :, state ].reshape( -1, 1 ) ), kernel = self.kernel[state], mean_function = None ) ]
+            self.gpModel += [ gpflow.models.GPR( data = ( self.__rawInputData, self.__rawOutputData[ :, state ].reshape( -1, 1 ) ),\
+                                                            kernel = self.kernel[state], mean_function = gpflow.mean_functions.Constant( c = 0.01 ) ) ]
 
-            opt.minimize( self.gpModel[state].training_loss, self.gpModel[state].trainable_variables, tol = 1e-6/100 )
+            opt.minimize( self.gpModel[state].training_loss, self.gpModel[state].trainable_variables, options = { 'maxiter': 10 } )
 
             print_summary( self.gpModel[state] )
 

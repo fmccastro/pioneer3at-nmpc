@@ -10,7 +10,7 @@ path.append(r"/home/fmccastro/Tese_RoverNavigation/ROS_workspaces/wsPy3/src/pion
 from std_msgs.msg import Float64MultiArray, Float64, Int32
 from geometry_msgs.msg import Twist
 
-from pioneer3at_control.msg import poseRef, pose3D, resampleData
+from pioneer3at_control.msg import pose3D, resampleData
 
 from classes import Common
 

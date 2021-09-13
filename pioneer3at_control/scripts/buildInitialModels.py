@@ -4,6 +4,7 @@ from __future__ import division
 
 import pickle, os
 import numpy as np
+import matplotlib.pyplot as plt 
 
 from sys import path
 path.append(r"/home/fmccastro/Tese_RoverNavigation/ROS_workspaces/wsPy3/src/pioneer3at_control/src")
@@ -23,7 +24,7 @@ if __name__ == '__main__':
 
         gp._saveTrainingData( rawInput[:, common.cutVar:], rawOutput )
         gp._loadPickle( common.pathKernel, common.pathLocalModels, 0 )
-
+        
         gp._saveTrainingData( rawInput, rawOutput )
 
         print( "[nmpc.py] Start local models building." )
@@ -39,6 +40,8 @@ if __name__ == '__main__':
         pickle.dump( a, f )
 
         f.close()
+
+        print(rawOutput)
 
     ###     Sparse Online Gaussian Processes (SOGP)
     elif( common.gpType == 1 ):

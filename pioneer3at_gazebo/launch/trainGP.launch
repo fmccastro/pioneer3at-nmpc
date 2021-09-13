@@ -5,6 +5,9 @@
     <node name = "poseSelectorTrainGP" pkg = "pioneer3at_control" type = "poseSelectorTrainGP.py" output = "screen" />
     <node name = "msgTransformer" pkg = "pioneer3at_control" type = "msgTransformer.py" output = "screen" />
 
+    <!-- Fusion of sensors to yield filtered pose -->
+    <include file = "$(find robot_localization)/launch/ekf_template.launch" />
+
     <rosparam>
         init: 2     <!-- Parameter to initialize nodes by descending order -->
     </rosparam>

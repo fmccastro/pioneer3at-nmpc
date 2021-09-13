@@ -57,7 +57,6 @@ if __name__ == '__main__':
 
     while( not rospy.is_shutdown() ):
         try:
-
             pose = common._selectPoseType( common.poseType )
             vel = common._selectVelType( common.poseType )
 
